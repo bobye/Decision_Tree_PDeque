@@ -419,7 +419,7 @@ namespace d2 {
       real_t r = (1 - *max_class_w / all_class_w);
       if (assignment.size == 1 || 
 	  assignment.depth == buf.max_depth || 
-	  r == 0 || 
+	  r < 2 / all_class_w || 
 	  all_class_w < buf.min_leaf_weight) {
 	// if the condtion to create a leaf node is satisfied
 	_DTLeaf<dim, n_class> *leaf = new _DTLeaf<dim, n_class>();
