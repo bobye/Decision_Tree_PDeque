@@ -319,22 +319,24 @@ namespace d2 {
 	proportion_right[y[_sample->index]] += w[_sample->index];
 	_sample = _sample->next;
       }
+      /*
       for (size_t i=0; i<n_class; ++i) {
 	proportion_left[i] += _DT::prior_weight;
 	proportion_right[i] += _DT::prior_weight;
       }
+      */
       for (size_t i=0; i<n_class; ++i) {
 	proportion_left.back() += proportion_left[i];
 	proportion_right.back() += proportion_right[i];
       }
       real_t no_split_score =criterion::op(proportion_right);
-      real_t total_weight = proportion_right.back() - n_class * _DT::prior_weight;
+      real_t total_weight = proportion_right.back();
 
       for (size_t i=0; i<n;) {	
 	real_t current_x = X[sample->index];
 	while (i<n && (X[sample->index] == current_x || w[sample->index] == 0)) {
-	  size_t yy=y[sample->index];
-	  real_t ww=w[sample->index];
+	  const size_t &yy=y[sample->index];
+	  const real_t &ww=w[sample->index];
 	  proportion_left[yy]  += ww;
 	  proportion_left.back() += ww;
 	  proportion_right[yy] -= ww;
@@ -343,8 +345,8 @@ namespace d2 {
 	};
 	if (i<n) {
 	  real_t goodness = no_split_score -
-	    ( criterion::op(proportion_left)  * (proportion_left.back()  - n_class * _DT::prior_weight) +
-	      criterion::op(proportion_right) * (proportion_right.back() - n_class * _DT::prior_weight)) / total_weight;
+	    ( criterion::op(proportion_left)  * (proportion_left.back()) +
+	      criterion::op(proportion_right) * (proportion_right.back())) / total_weight;
 	  if (goodness > best_goodness) {
 	    best_goodness = goodness;
 	    cutoff = X[sample->index];
@@ -354,7 +356,7 @@ namespace d2 {
       }
       return best_goodness;
     }
-
+    /*
     void inplace_split(sample *sample,
 		       node_assignment &assignment,
 		       real_t cutoff,
@@ -376,6 +378,7 @@ namespace d2 {
       for (size_t i=0; i<assignment.size; ++i)
 	assignment.ptr[i] = sample[i].index;      
     }
+    */
     void inplace_split_ptr(sorted_sample *sample,
 			   node_assignment &assignment) {
       for (size_t i=0; i<assignment.size; ++i, sample = sample->next) {
@@ -408,7 +411,7 @@ namespace d2 {
       real_t  all_class_w = std::accumulate(class_hist.begin(), class_hist.end(), 0.);      
 
       // get the probability score
-      real_t prob =  (*max_class_w + _DT::prior_weight) / (all_class_w + _DT::prior_weight * n_class);
+      real_t prob =  (*max_class_w) / (all_class_w);
       real_t r = (1 - *max_class_w / all_class_w);
       if (assignment.size == 1 || 
 	  assignment.depth == buf.max_depth || 
