@@ -198,6 +198,7 @@ namespace d2 {
       size_t size; ///< size of index array      
       size_t cache_offset; ///< offset to the cache array head, aka (ptr - cache_offset) should be constant
       int idx_cache_index;
+      int depth;
     };
 
     /*! \brief data structure for a single sample
@@ -247,6 +248,7 @@ namespace d2 {
     
     /*! \brief find the best split (cutoff) for a given feature
      */
+    /*
     template <size_t n_class, typename criterion>
     real_t best_split(sample *sample,
 		      size_t n,
@@ -295,6 +297,7 @@ namespace d2 {
       }
       return best_goodness;
     }
+    */
 
     template <size_t dim, size_t n_class, typename criterion>
     real_t best_split_ptr(sorted_sample *sample,
@@ -340,7 +343,8 @@ namespace d2 {
 	};
 	if (i<n) {
 	  real_t goodness = no_split_score -
-	    ( criterion::op(proportion_left)  * (proportion_left.back()  - n_class * _DT::prior_weight) +         criterion::op(proportion_right) * (proportion_right.back() - n_class * _DT::prior_weight)) / total_weight;
+	    ( criterion::op(proportion_left)  * (proportion_left.back()  - n_class * _DT::prior_weight) +
+	      criterion::op(proportion_right) * (proportion_right.back() - n_class * _DT::prior_weight)) / total_weight;
 	  if (goodness > best_goodness) {
 	    best_goodness = goodness;
 	    cutoff = X[sample->index];
@@ -407,8 +411,8 @@ namespace d2 {
       real_t prob =  (*max_class_w + _DT::prior_weight) / (all_class_w + _DT::prior_weight * n_class);
       real_t r = (1 - *max_class_w / all_class_w);
       if (assignment.size == 1 || 
-	  buf.tree_stack.size() > buf.max_depth || 
-	  r < 1E-4 || 
+	  assignment.depth == buf.max_depth || 
+	  r == 0 || 
 	  all_class_w < buf.min_leaf_weight) {
 	// if the condtion to create a leaf node is satisfied
 	_DTLeaf<dim, n_class> *leaf = new _DTLeaf<dim, n_class>();
@@ -476,7 +480,7 @@ namespace d2 {
 	// pick the best goodness 
 	real_t* best_goodness = std::max_element(goodness.begin(), goodness.end());
 	if (dim_index >= 0) assert(best_goodness - goodness.begin() == dim_index || *best_goodness == 0);
-	if (*best_goodness < 1E-9) {
+	if (*best_goodness == 0) {
 	  // if the best goodness is not good enough, a leaf node is still created
 	  _DTLeaf<dim, n_class> *leaf = new _DTLeaf<dim, n_class>();
 	  leaf->class_histogram = class_hist;
@@ -629,9 +633,9 @@ namespace d2 {
       // create the node_assignment at root node and push into stack
       node_assignment root_assignment;
       if (_buf.warm_start)
-	root_assignment = {&root_index[0], sample_size, 0, 0};
+	root_assignment = {&root_index[0], sample_size, 0, 0, 1};
       else
-	root_assignment = {&root_index[0], sample_size, 0, -1};
+	root_assignment = {&root_index[0], sample_size, 0, -1, 1};
       tree_stack.push(std::make_tuple(root_assignment, -1));
 
       // allocate cache memory
@@ -659,11 +663,13 @@ namespace d2 {
 						       assignment_left,
 						       assignment_right,
 						       _buf,
-						       presort);	  
+						       presort);
 	node->parent = cur_parent; // set parent index
 	tree_stack.pop();
 	bool is_branch;
 	if (assignment_left.ptr && assignment_right.ptr) {// spanning the tree	  
+	  assignment_left.depth = cur_assignment.depth + 1;
+	  assignment_right.depth = cur_assignment.depth + 1;
 	  if (_buf.warm_start && cur_assignment.idx_cache_index >= 0) {
 	    assignment_left.idx_cache_index   = index_arr[cur_assignment.idx_cache_index].nleft;
 	    assignment_right.idx_cache_index= index_arr[cur_assignment.idx_cache_index].nright;

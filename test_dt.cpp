@@ -1,9 +1,9 @@
 #include "decision_tree.hpp"
 #include <random>
-#include <cstdio>
 #include <fstream>
+#include <sstream>
 using namespace d2;
-
+using namespace std;
 
 #ifndef N
 #define N 1000000
@@ -54,15 +54,19 @@ int main(int argc, char* argv[]) {
   if (argc == 1) {
     sample_naive_data(X, y, w);
   } else {
-    std::ifstream train_fs;
+    ifstream train_fs;
     train_fs.open(argv[1]);
     for (auto i=0; i<N; ++i) {
-      std::string line;
+      string line;
       getline(train_fs, line);
-      const char *_buf = line.c_str();
-      sscanf(_buf, "%lf", &y[i]);
-      for (auto j=0; j<D; ++j)
-	sscanf(_buf, ",%lf", &X[i*D+j]);
+      istringstream ss(line);
+      string number;
+      getline(ss, number, ',');
+      y[i] = stof(number);
+      for (auto j=0; j<D; ++j) {
+	getline(ss, number, ',');
+	X[i*D+j] = stof(number);
+      }
     }
     train_fs.close();
   }
@@ -77,6 +81,7 @@ int main(int argc, char* argv[]) {
   real_t start=getRealTime();
   classifier->fit(X, y, w, N);
   printf("time: %lf seconds\n", getRealTime() - start);
+  printf("nleafs: %d \n", classifier->root->get_leaf_count());
 
   if (argc == 1) {
     // prepare naive testing data
@@ -86,6 +91,10 @@ int main(int argc, char* argv[]) {
     // output result
     printf("accuracy: %.3f\n", accuracy(y_pred, y, N) );  
   }
+
+  delete [] X;
+  delete [] y;
+  delete [] y_pred;
 
   return 0;
 }
