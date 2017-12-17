@@ -82,10 +82,10 @@ int main(int argc, char* argv[]) {
   classifier->set_max_depth(MD);
   classifier->set_min_leaf_weight(MW);
   // training
-  real_t start=getRealTime();
+  double start=getRealTime();
   classifier->fit(X, y, w, N);
   printf("time: %lf seconds\n", getRealTime() - start);
-  printf("nleafs: %d \n", classifier->root->get_leaf_count());
+  printf("nleafs: %zu \n", classifier->root->get_leaf_count());
 
   if (argc == 1) {
     // prepare naive testing data

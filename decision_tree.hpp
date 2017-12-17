@@ -316,7 +316,8 @@ namespace d2 {
       std::array<real_t, n_class+1> proportion_right = {};
       sorted_sample* _sample = sample;
       for (size_t i=0; i<n; ++i) {
-	proportion_right[y[_sample->index]] += w[_sample->index];
+	size_t &ind = _sample->index;
+	proportion_right[y[ind]] += w[ind];
 	_sample = _sample->next;
       }
       /*
@@ -329,27 +330,29 @@ namespace d2 {
 	proportion_left.back() += proportion_left[i];
 	proportion_right.back() += proportion_right[i];
       }
-      real_t no_split_score =criterion::op(proportion_right);
-      real_t total_weight = proportion_right.back();
+      const real_t no_split_score =criterion::op(proportion_right);
+      const real_t total_weight = proportion_right.back();
 
       for (size_t i=0; i<n;) {	
-	real_t current_x = X[sample->index];
-	while (i<n && (X[sample->index] == current_x || w[sample->index] == 0)) {
-	  const size_t &yy=y[sample->index];
-	  const real_t &ww=w[sample->index];
+	size_t ind = sample->index;
+	const real_t current_x = X[ind];
+	while (i<n && (X[ind] == current_x || w[ind] == 0)) {
+	  const size_t &yy=y[ind];
+	  const real_t &ww=w[ind];
 	  proportion_left[yy]  += ww;
 	  proportion_left.back() += ww;
 	  proportion_right[yy] -= ww;
 	  proportion_right.back() -= ww;
 	  i++; sample = sample->next;
+	  ind = sample->index;
 	};
 	if (i<n) {
-	  real_t goodness = no_split_score -
+	  const real_t goodness = no_split_score -
 	    ( criterion::op(proportion_left)  * (proportion_left.back()) +
 	      criterion::op(proportion_right) * (proportion_right.back())) / total_weight;
 	  if (goodness > best_goodness) {
 	    best_goodness = goodness;
-	    cutoff = X[sample->index];
+	    cutoff = current_x;
 	    left_count = i;
 	  }
 	}
@@ -866,7 +869,7 @@ namespace d2 {
 	update_weight(XX, yy, ss, sample_size, buf);
       }
 
-      real_t start=getRealTime();
+      double start=getRealTime();
       root = build_tree<dim, n_class, criterion>(sample_size, buf, leaf_arr, branch_arr, true);
       printf("tree induction time: %lf seconds\n", getRealTime() - start);
 
