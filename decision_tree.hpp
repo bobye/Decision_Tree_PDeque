@@ -345,7 +345,7 @@ namespace d2 {
 	  proportion_right[yy] --; //-= ww;
 	  rb --; //-= ww;
 	  i++; sample = sample->next;
-	  ind = sample->index;
+	  if (sample) ind = sample->index;
 	};
 	if (i<n) {
 	  const real_t goodness = no_split_score -
