@@ -523,11 +523,9 @@ namespace d2 {
 	  aright.cache_offset = assignment.cache_offset + left_count[ii];
 
 	  if (presort) {
-#pragma omp parallel for
 	    for (size_t i=0; i<aleft.size; ++i) {
 	      buf.sample_mask_cache[aleft.ptr[i]] = 'l';
 	    }
-#pragma omp parallel for
 	    for (size_t i=0; i<aright.size; ++i){
 	      buf.sample_mask_cache[aright.ptr[i]]= 'r';
 	    }
@@ -628,7 +626,6 @@ namespace d2 {
 
       // create index array at root node
       std::vector<size_t> root_index(sample_size);
-#pragma omp parallel for
       for (size_t i=0; i<sample_size; ++i) root_index[i] = i;
       // create the node_assignment at root node and push into stack
       node_assignment root_assignment;
