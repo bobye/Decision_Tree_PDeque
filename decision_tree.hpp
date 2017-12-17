@@ -476,7 +476,7 @@ namespace d2 {
 	// pick the best goodness 
 	real_t* best_goodness = std::max_element(goodness.begin(), goodness.end());
 	if (dim_index >= 0) assert(best_goodness - goodness.begin() == dim_index || *best_goodness == 0);
-	if (*best_goodness < 1E-5) {
+	if (*best_goodness < 1E-9) {
 	  // if the best goodness is not good enough, a leaf node is still created
 	  _DTLeaf<dim, n_class> *leaf = new _DTLeaf<dim, n_class>();
 	  leaf->class_histogram = class_hist;
