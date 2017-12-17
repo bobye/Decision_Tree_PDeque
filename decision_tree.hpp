@@ -880,6 +880,7 @@ namespace d2 {
 
     inline void set_communicate(bool bval) { communicate = bval; }
     inline void set_max_depth(size_t depth) { max_depth = depth; }
+    inline void set_min_leaf_weight(real_t weight) { min_leaf_weight = weight; }
     typedef internal::_DTLeaf<dim, n_class> LeafNode;
     typedef internal::_DTBranch<dim, n_class> BranchNode;
 

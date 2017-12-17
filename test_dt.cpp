@@ -21,6 +21,10 @@ using namespace std;
 #define MD 8
 #endif
 
+#ifndef MW
+#define MW .0
+#endif
+
 void sample_naive_data(real_t *X, real_t *y, real_t *w) {
   for (size_t i=0; i<N; ++i) {
     y[i] = rand() % 2;
@@ -76,7 +80,7 @@ int main(int argc, char* argv[]) {
   auto classifier = new Decision_Tree<D, NC, def::gini>();
   classifier->init();
   classifier->set_max_depth(MD);
-
+  classifier->set_min_leaf_weight(MW);
   // training
   real_t start=getRealTime();
   classifier->fit(X, y, w, N);
