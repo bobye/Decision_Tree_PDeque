@@ -28,14 +28,13 @@ namespace d2 {
       template <size_t n_class_plusone>
       static inline real_t op(const std::array<real_t, n_class_plusone> &proportion) {
 	real_t total_weight_sqr;
-	total_weight_sqr = proportion.back();
-	total_weight_sqr = total_weight_sqr * total_weight_sqr;
-	if (total_weight_sqr <= 0) return 1.;
+	total_weight_sqr = proportion.back() * proportion.back();
+	//if (total_weight_sqr <= 0) return 1.;
 
-	real_t gini = 1.;
+	real_t gini = total_weight_sqr;
 	for (size_t i = 0; i<n_class_plusone - 1; ++i)
-	  gini -= (proportion[i] * proportion[i]) / total_weight_sqr ;
-
+	  gini -= proportion[i] * proportion[i];
+	gini /= total_weight_sqr;
 	return gini;
       }
       static inline real_t loss(const real_t &x) {return 1-x;}
@@ -213,11 +212,14 @@ namespace d2 {
     /*! \brief data structure for additional linked list on presort samples
      */
     struct sorted_sample {
-      //      real_t x;
+      real_t x;
       //      size_t y;
       //      real_t weight;
       size_t index;
       sorted_sample *next;
+      inline static bool cmp(const sorted_sample &a, const sorted_sample &b) {
+	return a.x < b.x;
+      }
     };
 
     struct index_cache {
@@ -230,7 +232,7 @@ namespace d2 {
      */
     template <size_t dim, size_t n_class>    
     struct buf_tree_constructor {      
-      std::vector<std::vector<real_t> > X; ///< store data in coordinate-order
+      //std::vector<std::vector<real_t> > X; ///< store data in coordinate-order
       std::vector<size_t> y;
       std::vector<real_t> sample_weight;
       size_t max_depth;
@@ -308,48 +310,47 @@ namespace d2 {
 			  const size_t ii, // feature index
 			  const buf_tree_constructor<dim, n_class> &buf) {
       assert(presort);
-      auto &y = buf.y; auto &X = buf.X[ii]; auto &w = buf.sample_weight;
-
+      auto &y = buf.y; auto &w = buf.sample_weight;
+      
       real_t best_goodness = 0;
 
       std::array<real_t, n_class+1> proportion_left = {};
       std::array<real_t, n_class+1> proportion_right = {};
+      auto &lb = proportion_left.back();
+      auto &rb = proportion_right.back();
+
       sorted_sample* _sample = sample;
       for (size_t i=0; i<n; ++i) {
 	size_t &ind = _sample->index;
-	proportion_right[y[ind]] += w[ind];
+	//proportion_right[y[ind]] += w[ind];
+	proportion_right[y[ind]] ++;
 	_sample = _sample->next;
-      }
-      /*
+      }      
+
       for (size_t i=0; i<n_class; ++i) {
-	proportion_left[i] += _DT::prior_weight;
-	proportion_right[i] += _DT::prior_weight;
-      }
-      */
-      for (size_t i=0; i<n_class; ++i) {
-	proportion_left.back() += proportion_left[i];
-	proportion_right.back() += proportion_right[i];
+	//	lb += proportion_left[i];
+	rb += proportion_right[i];
       }
       const real_t no_split_score =criterion::op(proportion_right);
-      const real_t total_weight = proportion_right.back();
+      const real_t total_weight = rb;
 
       for (size_t i=0; i<n;) {	
 	size_t ind = sample->index;
-	const real_t current_x = X[ind];
-	while (i<n && (X[ind] == current_x || w[ind] == 0)) {
+	const real_t current_x = sample->x;
+	while (i<n && (sample->x == current_x /*|| w[ind] == 0 */)) {
 	  const size_t &yy=y[ind];
-	  const real_t &ww=w[ind];
-	  proportion_left[yy]  += ww;
-	  proportion_left.back() += ww;
-	  proportion_right[yy] -= ww;
-	  proportion_right.back() -= ww;
+	  //const real_t ww=w[ind];
+	  proportion_left[yy]  ++; //+= ww;
+	  lb ++; //+= ww;
+	  proportion_right[yy] --; //-= ww;
+	  rb --; //-= ww;
 	  i++; sample = sample->next;
 	  ind = sample->index;
 	};
 	if (i<n) {
 	  const real_t goodness = no_split_score -
-	    ( criterion::op(proportion_left)  * (proportion_left.back()) +
-	      criterion::op(proportion_right) * (proportion_right.back())) / total_weight;
+	    ( criterion::op(proportion_left)  * (lb) +
+	      criterion::op(proportion_right) * (rb)) / total_weight;
 	  if (goodness > best_goodness) {
 	    best_goodness = goodness;
 	    cutoff = current_x;
@@ -959,20 +960,23 @@ namespace d2 {
 			 const size_t sample_size,
 			 internal::buf_tree_constructor<dim, n_class> &buf) {
 
+      /*
       buf.X.resize(dim);
       for (size_t k=0; k<dim; ++k) buf.X[k].resize(sample_size);
+      */
       buf.y.resize(sample_size);
-      buf.sample_weight.resize(sample_size);
+      buf.sample_weight.resize(sample_size, 1.);
       for (size_t i=0, j=0; i<sample_size; ++i) {
+	/*
 	for (size_t k=0; k<dim; ++k, ++j) {
 	  buf.X[k][i]=XX[j];
 	}
+	*/
 	buf.y[i]=(size_t) yy[i];
-	if (ss)
-	  buf.sample_weight[i]=ss[i];
-	else
-	  buf.sample_weight[i]=1.;
       }
+      if (ss)
+	for (size_t i=0; i<sample_size; ++i) buf.sample_weight[i]=ss[i];
+	
 
       buf.sorted_samples.resize(dim);
       buf.inv_ind_sorted.resize(dim);
@@ -983,11 +987,12 @@ namespace d2 {
 	auto &inv_ind_sorted = buf.inv_ind_sorted[k];
 	sorted_samples.resize(sample_size);
 	inv_ind_sorted.resize(sample_size);
-	const real_t * XX = &buf.X[k][0];
-	for (size_t i=0; i<sample_size; ++i) {
+	//const real_t * XX = &buf.X[k][0];
+	const real_t *XXX = XX + k;
+	for (size_t i=0; i<sample_size; ++i, XXX+=dim) {
 	  auto &sample = sorted_samples[i];
+	  sample.x = *XXX;
 	  /*
-	  sample.x = XX[i];
 	  sample.y = (size_t) yy[i];
 	  if (ss)
 	    sample.weight = ss[i];
@@ -997,9 +1002,7 @@ namespace d2 {
 	  sample.index = i;
 	}
 	// presort
-	std::sort(sorted_samples.begin(), sorted_samples.end(),
-		  [&](const struct internal::sorted_sample &a,
-		      const struct internal::sorted_sample &b) -> bool {return XX[a.index] < XX[b.index];});
+	std::sort(sorted_samples.begin(), sorted_samples.end(), internal::sorted_sample::cmp);
 
 	for (size_t i=0; i<sample_size; ++i) {
 	  inv_ind_sorted[sorted_samples[i].index] = i;
@@ -1014,14 +1017,16 @@ namespace d2 {
 		       const size_t sample_size,
 		       internal::buf_tree_constructor<dim, n_class> &buf) {
       if (!ss) return;
-      assert(buf.X.size() == dim);
-      for (size_t k=0; k<dim; ++k) assert(buf.X[k].size() == sample_size);
+      //assert(buf.X.size() == dim);
+      //for (size_t k=0; k<dim; ++k) assert(buf.X[k].size() == sample_size);
       assert(buf.y.size() == sample_size);
       assert(buf.sample_weight.size() == sample_size);
       for (size_t i=0, j=0; i<sample_size; ++i) {
+	/*
 	for (size_t k=0; k<dim; ++k, ++j) {
 	  assert(buf.X[k][i] == XX[j]);
 	}
+	*/
 	assert(buf.y[i] == (size_t) yy[i]);
 	buf.sample_weight[i] = ss[i];
       }
@@ -1034,7 +1039,7 @@ namespace d2 {
 	auto &inv_ind_sorted = buf.inv_ind_sorted[k];
 	assert(sorted_samples.size() == sample_size);
 	assert(inv_ind_sorted.size() == sample_size);
-	const real_t * XX = &buf.X[k][0];
+	// const real_t * XX = &buf.X[k][0];
 	for (size_t i=0; i<sample_size; ++i) {
 	  auto &sample = sorted_samples[i];
 	  size_t index = sample.index;
