@@ -213,7 +213,7 @@ namespace d2 {
      */
     struct sorted_sample {
       real_t x;
-      //      size_t y;
+      unsigned short int y;
       //      real_t weight;
       size_t index;
       sorted_sample *next;
@@ -233,7 +233,7 @@ namespace d2 {
     template <size_t dim, size_t n_class>    
     struct buf_tree_constructor {      
       //std::vector<std::vector<real_t> > X; ///< store data in coordinate-order
-      std::vector<size_t> y;
+      std::vector<unsigned short int> y;
       std::vector<real_t> sample_weight;
       size_t max_depth;
       real_t min_leaf_weight;
@@ -327,7 +327,7 @@ namespace d2 {
       for (size_t i=0; i<n;) {	
 	size_t ind = sample->index;
 	const real_t current_x = sample->x;
-	size_t yy = label = y[ind];
+	size_t yy = label = sample->y;
 	while (i<n && (sample->x == current_x || yy == label /*|| w[ind] == 0 */)) {
 	  //const real_t ww=w[ind];
 	  proportion_left[yy] ++; // += ww;
@@ -337,11 +337,11 @@ namespace d2 {
 	  i++; sample = sample->next;
 	  if (sample) {
 	    ind = sample->index;
-	    yy=y[ind];
+	    yy = sample->y;
 	  }
 	};
 	if (i<n) {
-	  label = y[ind];
+	  label = yy;
 	  const real_t goodness = no_split_score -
 	    ( criterion::op(proportion_left)  * (lb) +
 	      criterion::op(proportion_right) * (rb)) / total_weight;
@@ -926,7 +926,7 @@ namespace d2 {
 	  buf.X[k][i]=XX[j];
 	}
 	*/
-	buf.y[i]=(size_t) yy[i];
+	buf.y[i]=(unsigned short int) yy[i];
       }
       if (ss)
 	for (size_t i=0; i<sample_size; ++i) buf.sample_weight[i]=ss[i];
@@ -946,8 +946,8 @@ namespace d2 {
 	for (size_t i=0; i<sample_size; ++i, XXX+=dim) {
 	  auto &sample = sorted_samples[i];
 	  sample.x = *XXX;
+	  sample.y = (unsigned short int) yy[i];
 	  /*
-	  sample.y = (size_t) yy[i];
 	  if (ss)
 	    sample.weight = ss[i];
 	  else
@@ -981,7 +981,7 @@ namespace d2 {
 	  assert(buf.X[k][i] == XX[j]);
 	}
 	*/
-	assert(buf.y[i] == (size_t) yy[i]);
+	assert(buf.y[i] == (unsigned short int) yy[i]);
 	buf.sample_weight[i] = ss[i];
       }
       
