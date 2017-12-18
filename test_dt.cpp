@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
     classifier->predict(X, N, y_pred);
 
     // output result
-    printf("accuracy: %.3f\n", accuracy(y_pred, y, N) );  
+    printf("test accuracy: %.3f\n", accuracy(y_pred, y, N) );  
   } else if (argc == 3) {
     assert(M < N);
     ifstream test_fs;
@@ -123,7 +123,7 @@ int main(int argc, char* argv[]) {
     }
     test_fs.close();
     classifier->predict(X, M, y_pred);
-    printf("accuracy: %.3f\n", accuracy(y_pred, y, M) );      
+    printf("test accuracy: %.3f\n", accuracy(y_pred, y, M) );      
   }
 
   delete [] X;
