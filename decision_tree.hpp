@@ -432,7 +432,7 @@ namespace d2 {
 	std::array<size_t, dim> min_index_cache = {};
 	// compute goodness split score across different dimensions
 	//	if (dim_index >= 0) printf("cached index: %d\n", dim_index);
-#pragma omp parallel for schedule(dynamic, 1)
+#pragma omp parallel for
 	for (size_t ii = 0; ii < dim; ++ii)
 	{
 	  //sample *sample_cache = &buf.sample_cache[0] + assignment.cache_offset;
@@ -535,7 +535,7 @@ namespace d2 {
 	      buf.sample_mask_cache[aright.ptr[i]]= 'r';
 	    }
 
-#pragma omp parallel for schedule(dynamic, 1)
+#pragma omp parallel for
 	    for (size_t ii=0; ii<dim; ++ii) {
 	      sorted_sample *sorted_sample_ptr = &buf.sorted_samples[ii][min_index_cache[ii]];
 	      const std::vector<size_t> &inv_ind_sorted = buf.inv_ind_sorted[ii];
@@ -935,7 +935,7 @@ namespace d2 {
       buf.sorted_samples.resize(dim);
       buf.inv_ind_sorted.resize(dim);
       buf.sample_mask_cache.resize(sample_size);
-#pragma omp parallel for schedule(dynamic, 1)
+#pragma omp parallel for
       for (size_t k=0; k<dim; ++k) {
 	auto &sorted_samples = buf.sorted_samples[k];
 	auto &inv_ind_sorted = buf.inv_ind_sorted[k];
