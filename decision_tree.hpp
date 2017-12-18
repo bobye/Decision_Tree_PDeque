@@ -142,7 +142,7 @@ namespace d2 {
     public:
       _DTLeaf<dim, n_class>* get_leafnode(const real_t *X) {
 	assert(left && right);
-	if (X[index]<cutoff) {
+	if (X[index]<=cutoff) {
 	  return left->get_leafnode(X);
 	} else {
 	  return right->get_leafnode(X);
@@ -322,8 +322,7 @@ namespace d2 {
       sorted_sample* _sample = sample;
       for (size_t i=0; i<n; ++i) {
 	size_t &ind = _sample->index;
-	//proportion_right[y[ind]] += w[ind];
-	proportion_right[y[ind]] ++;
+	proportion_right[y[ind]] += w[ind];
 	_sample = _sample->next;
       }      
 
@@ -339,11 +338,11 @@ namespace d2 {
 	const real_t current_x = sample->x;
 	while (i<n && (sample->x == current_x /*|| w[ind] == 0 */)) {
 	  const size_t &yy=y[ind];
-	  //const real_t ww=w[ind];
-	  proportion_left[yy]  ++; //+= ww;
-	  lb ++; //+= ww;
-	  proportion_right[yy] --; //-= ww;
-	  rb --; //-= ww;
+	  const real_t ww=w[ind];
+	  proportion_left[yy]  += ww;
+	  lb += ww;
+	  proportion_right[yy] -= ww;
+	  rb -= ww;
 	  i++; sample = sample->next;
 	  if (sample) ind = sample->index;
 	};
@@ -487,7 +486,9 @@ namespace d2 {
 	// pick the best goodness 
 	real_t* best_goodness = std::max_element(goodness.begin(), goodness.end());
 	if (dim_index >= 0) assert(best_goodness - goodness.begin() == dim_index || *best_goodness == 0);
-	if (*best_goodness == 0) {
+	if (*best_goodness == 0 ||
+	    left_count[best_goodness - goodness.begin()] < buf.min_leaf_weight ||
+	    left_count[best_goodness - goodness.begin()] > assignment.size - buf.min_leaf_weight) {
 	  // if the best goodness is not good enough, a leaf node is still created
 	  _DTLeaf<dim, n_class> *leaf = new _DTLeaf<dim, n_class>();
 	  leaf->class_histogram = class_hist;
@@ -781,50 +782,6 @@ namespace d2 {
 	y[i] = leaf->label;
       }
     };
-    /*    
-    real_t predict(const real_t *X) const {
-      return root->get_leafnode(X)->label;
-    }
-    */
-    /*
-    real_t eval(const real_t *X, const real_t y) const {
-      LeafNode *leaf = root->get_leafnode(X);
-      std::array<real_t, n_class> &histogram = leaf->class_histogram;
-      return criterion::loss((histogram[(size_t) y] + internal::_DT::prior_weight) / (leaf->weight + internal::_DT::prior_weight * n_class));
-    }
-    void eval_alllabel(const real_t *X, real_t *loss, const size_t stride) const {
-      LeafNode *leaf = root->get_leafnode(X);
-      std::array<real_t, n_class> &histogram = leaf->class_histogram;
-      for (size_t i=0; i<n_class; ++i) {
-	loss[i*stride] = criterion::loss((histogram[i] + internal::_DT::prior_weight) / (leaf->weight + internal::_DT::prior_weight * n_class));
-      }
-    }
-    real_t eval_min(const real_t *X) const {
-      return root->get_leafnode(X)->score;
-    }
-    */
-    void evals(const real_t *X, const real_t *y, const size_t n, real_t *loss, const size_t leading, const size_t stride = 1) const {
-      for (size_t i=0; i<n; ++i) {
-	LeafNode *leaf = root->get_leafnode(X + i*dim);	
-	std::array<real_t, n_class> &histogram = leaf->class_histogram;
-	loss[i*leading] = criterion::loss((histogram[(size_t) y[i*stride]] + internal::_DT::prior_weight) / (leaf->weight + internal::_DT::prior_weight * n_class));
-      }
-    }
-    void evals_alllabel(const real_t *X, const size_t n, real_t *loss, const size_t leading, const size_t stride) const {
-      for (size_t i=0; i<n; ++i) {
-	LeafNode *leaf = root->get_leafnode(X + i*dim);	
-	std::array<real_t, n_class> &histogram = leaf->class_histogram;
-	for (size_t j=0; j<n_class; ++j) {
-	  loss[i*leading + j*stride] = criterion::loss((histogram[j] + internal::_DT::prior_weight) / (leaf->weight + internal::_DT::prior_weight * n_class));
-	}
-      }
-    }
-    void evals_min(const real_t *X, const size_t n, real_t *loss, const size_t leading) const {
-      for (size_t i=0; i<n; ++i) {
-	LeafNode *leaf = root->get_leafnode(X+i*dim);
-	loss[i*leading] = leaf->score;
-      }
-    }
     
     int fit(const real_t *X, const real_t *y, const real_t *sample_weight, const size_t n,
 	    bool sparse = false) {
