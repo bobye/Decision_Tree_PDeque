@@ -189,27 +189,6 @@ namespace d2 {
       size_t n_leafs;
     };
 
-    /*! \brief node assignment data structure stores
-     * the indexes of sample data
-     */
-    struct node_assignment {
-      size_t * ptr; ///< index array
-      size_t size; ///< size of index array      
-      size_t cache_offset; ///< offset to the cache array head, aka (ptr - cache_offset) should be constant
-      int idx_cache_index;
-      int depth;
-    };
-
-    /*! \brief data structure for a single sample
-     */
-    /*
-    struct sample {
-      real_t x;
-      size_t y;
-      real_t weight;
-      size_t index;
-    };
-    */
     
     /*! \brief data structure for additional linked list on presort samples
      */
@@ -218,10 +197,23 @@ namespace d2 {
       unsigned short int y;
       //      real_t weight;
       size_t index;
-      sorted_sample *next;
+      //sorted_sample *next;
       inline static bool cmp(const sorted_sample &a, const sorted_sample &b) {
 	return a.x < b.x;
       }
+    };
+
+    /*! \brief node assignment data structure stores
+     * the indexes of sample data
+     */
+    typedef std::deque<sorted_sample> ss_deque_t;
+    struct node_assignment {
+      size_t * ptr; ///< index array
+      std::vector<ss_deque_t*> sorted_samples;
+      size_t size; ///< size of index array      
+      size_t cache_offset; ///< offset to the cache array head, aka (ptr - cache_offset) should be constant
+      int idx_cache_index;
+      int depth;
     };
 
     struct index_cache {
@@ -244,76 +236,20 @@ namespace d2 {
       std::stack<std::tuple<node_assignment, int> > tree_stack;
 
       // decision tree with presort
-      std::vector<std::vector<sorted_sample> > sorted_samples;
+      //std::vector<std::vector<sorted_sample> > sorted_samples;
       std::vector<std::vector<size_t> > inv_ind_sorted;
       std::vector<char> sample_mask_cache;
-    };    
-
+    };
     
-    /*! \brief find the best split (cutoff) for a given feature
-     */
-    /*
-    template <size_t n_class, typename criterion>
-    real_t best_split(sample *sample,
-		      size_t n,
-		      real_t &cutoff,
-		      size_t &left_count,
-		      const bool presort) {
-      if (!presort) {
-	std::sort(sample, sample+n, [](const struct sample &a,
-				       const struct sample &b) -> bool {return a.x < b.x;});
-      }
-      real_t best_goodness = 0;
-
-      std::array<real_t, n_class+1> proportion_left = {};
-      std::array<real_t, n_class+1> proportion_right = {};
-      for (size_t i=0; i<n; ++i) proportion_right[sample[i].y] += sample[i].weight;
-      for (size_t i=0; i<n_class; ++i) {
-	proportion_left[i] += _DT::prior_weight;
-	proportion_right[i] += _DT::prior_weight;
-      }
-      for (size_t i=0; i<n_class; ++i) {
-	proportion_left.back() += proportion_left[i];
-	proportion_right.back() += proportion_right[i];
-      }
-      real_t no_split_score =criterion::op(proportion_right);
-      real_t total_weight = proportion_right.back() - n_class * _DT::prior_weight;
-      for (size_t i=0; i<n; ) {	
-	real_t current_x = sample[i].x;
-	while (i<n && (sample[i].x == current_x || sample[i].weight == 0)) {
-	  size_t y=sample[i].y;
-	  real_t w=sample[i].weight;
-	  proportion_left[y]  += w;
-	  proportion_left.back() += w;
-	  proportion_right[y] -= w;
-	  proportion_right.back() -= w;
-	  i++;
-	};
-	if (i<n) {
-	  real_t goodness = no_split_score -
-	    ( criterion::op(proportion_left)  * (proportion_left.back()  - n_class * _DT::prior_weight) +         criterion::op(proportion_right) * (proportion_right.back() - n_class * _DT::prior_weight)) / total_weight;
-	  if (goodness > best_goodness) {
-	    best_goodness = goodness;
-	    cutoff = sample[i].x;
-	    left_count = i;
-	  }
-	}
-      }
-      return best_goodness;
-    }
-    */
 
     template <size_t dim, size_t n_class, typename criterion>
-    real_t best_split_ptr(sorted_sample *sample,
+    real_t best_split_ptr(std::deque<sorted_sample> &sample_deque,
 			  size_t n,
 			  real_t &cutoff,
 			  size_t &left_count,
 			  const bool presort,
-			  const size_t ii, // feature index
-			  const buf_tree_constructor<dim, n_class> &buf,
 			  const std::array<real_t, n_class+1> &class_hist) {
       assert(presort);
-      auto &y = buf.y; auto &w = buf.sample_weight;
       
       real_t best_goodness = 0;
 
@@ -325,8 +261,8 @@ namespace d2 {
       const real_t no_split_score =criterion::op(proportion_right);
       const real_t total_weight = rb;
 
-      size_t label;
-      for (size_t i=0; i<n;) {	
+      size_t label, i=0;
+      for (auto sample = sample_deque.begin(); sample != sample_deque.end();) {	
 	//size_t ind = sample->index;
 	const real_t current_x = sample->x;
 	size_t yy = label = sample->y;
@@ -336,8 +272,8 @@ namespace d2 {
 	  lb ++; // += ww;
 	  proportion_right[yy] --; // -= ww;
 	  rb --; // -= ww;
-	  i++; sample = sample->next;
-	  if (sample) {
+	  i++; sample ++;
+	  if (sample != sample_deque.end()) {
 	    //ind = sample->index;
 	    yy = sample->y;
 	  }
@@ -356,32 +292,11 @@ namespace d2 {
       }
       return best_goodness;
     }
-    /*
-    void inplace_split(sample *sample,
-		       node_assignment &assignment,
-		       real_t cutoff,
-		       size_t left_count) {
-      struct sample *head, *end;
-      head = sample;
-      end = sample + assignment.size - 1;
-      while (head < end) {
-	while (head < end && head->x < cutoff) ++head;
-	while (head < end && end->x >= cutoff) --end;
-	if (head < end) {
-	  struct sample swap_cache;
-	  swap_cache = *head;
-	  *head      = *end;
-	  *end       = swap_cache;
-	}
-      }
-      assert(head - sample == left_count);
-      for (size_t i=0; i<assignment.size; ++i)
-	assignment.ptr[i] = sample[i].index;      
-    }
-    */
-    void inplace_split_ptr(sorted_sample *sample,
+
+    void inplace_split_ptr(std::deque<sorted_sample> &sample_deque,
 			   node_assignment &assignment) {
-      for (size_t i=0; i<assignment.size; ++i, sample = sample->next) {
+      auto sample = sample_deque.begin();
+      for (size_t i=0; i<assignment.size; ++i, sample ++) {
 	assignment.ptr[i] = sample->index;
       }
     }    
@@ -431,55 +346,17 @@ namespace d2 {
 	std::array<real_t, dim> goodness = {};
 	std::array<real_t, dim> cutoff   = {};
 	std::array<size_t, dim> left_count = {};
-	std::array<size_t, dim> min_index_cache = {};
+	// std::array<size_t, dim> min_index_cache = {};
 	// compute goodness split score across different dimensions
 	//	if (dim_index >= 0) printf("cached index: %d\n", dim_index);
 #pragma omp parallel for
 	for (size_t ii = 0; ii < dim; ++ii)
 	{
-	  //sample *sample_cache = &buf.sample_cache[0] + assignment.cache_offset;
-	  if (!presort) {
-	    assert(presort);
-	    /*
-	    for (size_t jj = 0; jj < assignment.size; ++jj) {
-	      size_t index = assignment.ptr[jj];
-	      sample &sample = sample_cache[jj];
-	      sample.x = buf.X[ii][index];
-	      sample.y = buf.y[index];
-	      sample.weight = buf.sample_weight[index];
-	      sample.index = index;
-	    }
-	    */
-	  } else {
-	    const std::vector<size_t> &inv_ind_sorted = buf.inv_ind_sorted[ii];
-	    size_t *min_index = std::min_element(assignment.ptr, assignment.ptr + assignment.size,
-						 [&](const size_t &a, const size_t &b) -> bool
-						 {return inv_ind_sorted[a] < inv_ind_sorted[b];});
-	    min_index_cache[ii] = inv_ind_sorted[*min_index];
-	    /*
-	    if (dim_index < 0 || ii == dim_index) {
-	      sorted_sample *sorted_sample_ptr = &buf.sorted_samples[ii][min_index_cache[ii]];	    
-	      for (size_t jj = 0; jj < assignment.size; ++jj) {
-		assert(sorted_sample_ptr);
-		sample &sample = sample_cache[jj];
-		sample.index  = sorted_sample_ptr->index;
-		sample.x = buf.X[ii][sample.index];
-		sample.y = buf.y[sample.index];
-		sample.weight = buf.sample_weight[sample.index];
-		sorted_sample_ptr = sorted_sample_ptr->next;
-	      }
-	    }
-	    */
-	  }
 	  if (dim_index < 0 || ii == dim_index) {
-	    /*
-	    goodness[ii] = best_split<n_class, criterion>
-	      (sample_cache, assignment.size, cutoff[ii], left_count[ii], presort);
-	    */
-	    sorted_sample *sorted_sample_ptr = &buf.sorted_samples[ii][min_index_cache[ii]];	    
+	    auto &sorted_samples = assignment.sorted_samples[ii];	    
 	    goodness[ii] = best_split_ptr<dim, n_class, criterion>
-	      (sorted_sample_ptr, assignment.size,
-	       cutoff[ii], left_count[ii], presort, ii, buf, class_hist);
+	      (*sorted_samples, assignment.size,
+	       cutoff[ii], left_count[ii], presort, class_hist);
 	  }
 	}
 	// pick the best goodness 
@@ -506,25 +383,14 @@ namespace d2 {
 	  branch->weight = all_class_w;
 	  branch->r = r * branch->weight;
 
-	  /*
-	  sample *sample_cache = &buf.sample_cache[0] + assignment.cache_offset;
-	  for (size_t jj=0; jj<assignment.size; ++jj) {
-	    sample_cache[jj].x = buf.X[ii][assignment.ptr[jj]];
-	    sample_cache[jj].index = assignment.ptr[jj];
-	    // note that sample_cache[jj].weight and sample_cache[jj].y are invalid	    
-	  }
-	  // split assignment	  
-	  inplace_split(sample_cache,
-			assignment,
-			branch->cutoff,
-			left_count[branch->index]);
-	  */
-	  inplace_split_ptr(&buf.sorted_samples[ii][min_index_cache[ii]], assignment);
+	  inplace_split_ptr(*assignment.sorted_samples[ii], assignment);
 
 	  // create branched assignment
+	  aleft.sorted_samples.resize(dim);
 	  aleft.ptr = assignment.ptr;
 	  aleft.size = left_count[ii];
 	  aleft.cache_offset = assignment.cache_offset;
+	  aright.sorted_samples.resize(dim);
 	  aright.ptr = assignment.ptr + left_count[ii];
 	  aright.size = assignment.size - left_count[ii];
 	  aright.cache_offset = assignment.cache_offset + left_count[ii];
@@ -539,30 +405,23 @@ namespace d2 {
 
 #pragma omp parallel for
 	    for (size_t ii=0; ii<dim; ++ii) {
-	      sorted_sample *sorted_sample_ptr = &buf.sorted_samples[ii][min_index_cache[ii]];
-	      const std::vector<size_t> &inv_ind_sorted = buf.inv_ind_sorted[ii];
-	      sorted_sample *left=NULL;
-	      sorted_sample *right=NULL;
+	      auto &ass = assignment.sorted_samples[ii];
+	      auto &left = aleft.sorted_samples[ii];
+	      auto &right = aright.sorted_samples[ii];
+	      left = new ss_deque_t();
+	      right = new ss_deque_t();
 	      for (size_t i=0; i<assignment.size; ++i) {
-		char mask = buf.sample_mask_cache[sorted_sample_ptr->index];
+		auto &sorted_sample = ass->front();
+		char mask = buf.sample_mask_cache[sorted_sample.index];
 		if (mask == 'l') {
-		  if (left) {
-		    left->next = sorted_sample_ptr;
-		    left = sorted_sample_ptr;
-		  } else {
-		    left = sorted_sample_ptr;
-		  }
+		  left->push_back(sorted_sample);
 		} else if (mask == 'r') {
-		  if (right) {
-		    right->next = sorted_sample_ptr;
-		    right = sorted_sample_ptr;
-		  } else {
-		    right = sorted_sample_ptr;
-		  }
+		  right->push_back(sorted_sample);
 		}
-		sorted_sample_ptr = sorted_sample_ptr->next;
+		ass->pop_front();
 	      }
-	    }
+	      delete ass;
+	    }	    
 	  }	  
 	  return branch;
 	}	
@@ -602,6 +461,7 @@ namespace d2 {
     template <size_t dim, size_t n_class, typename criterion>
     _DTNode<dim, n_class>* build_tree(size_t sample_size,
 				      buf_tree_constructor<dim, n_class> &_buf,
+				      node_assignment &assign,
 				      std::vector<internal::_DTLeaf<dim, n_class> > &leaf_arr,
 				      std::vector<internal::_DTBranch<dim, n_class> > &branch_arr,
 				      const bool presort) {
@@ -635,18 +495,22 @@ namespace d2 {
       std::vector<size_t> root_index(sample_size);
       for (size_t i=0; i<sample_size; ++i) root_index[i] = i;
       // create the node_assignment at root node and push into stack
-      node_assignment root_assignment;
-      if (_buf.warm_start)
-	root_assignment = {&root_index[0], sample_size, 0, 0, 1};
-      else
-	root_assignment = {&root_index[0], sample_size, 0, -1, 1};
+      node_assignment &root_assignment = assign;
+      root_assignment.ptr = &root_index[0];
+      root_assignment.size = sample_size;
+      root_assignment.cache_offset = 0;
+      root_assignment.idx_cache_index = 0;
+      root_assignment.depth = 1;
+      
       tree_stack.push(std::make_tuple(root_assignment, -1));
 
       // allocate cache memory
       // _buf.sample_cache.resize(sample_size);
       // to be returned
       _DTNode<dim, n_class> *root = nullptr;
+      //printf("finish tree induction initialization!\n");
 
+      
       // start to travel a tree construction using a stack
       while (!tree_stack.empty()) { 
 	auto cur_tree = tree_stack.top(); 
@@ -820,14 +684,14 @@ namespace d2 {
       buf.warm_start = true;
 
       if (!presorted) {
-	prepare_presort(XX, yy, ss, sample_size, buf);
+	prepare_presort(XX, yy, ss, sample_size, buf, assign);
 	presorted = true;
       } else {
-	update_weight(XX, yy, ss, sample_size, buf);
       }
-
+      //printf("finish presorting!\n");
+      
       double start=getRealTime();
-      root = build_tree<dim, n_class, criterion>(sample_size, buf, leaf_arr, branch_arr, true);
+      root = build_tree<dim, n_class, criterion>(sample_size, buf, assign, leaf_arr, branch_arr, true);
       printf("tree induction time: %lf seconds\n", getRealTime() - start);
 
       if (sparse) {
@@ -884,6 +748,7 @@ namespace d2 {
     internal::_DTNode<dim, n_class> *root = nullptr;
   private:
     internal::buf_tree_constructor<dim, n_class> buf;
+    internal::node_assignment assign;
     std::vector<LeafNode> leaf_arr; 
     std::vector<BranchNode> branch_arr;
     size_t max_depth = 10;
@@ -914,7 +779,8 @@ namespace d2 {
 #endif
     void prepare_presort(const real_t *XX, const real_t *yy, const real_t* ss,
 			 const size_t sample_size,
-			 internal::buf_tree_constructor<dim, n_class> &buf) {
+			 internal::buf_tree_constructor<dim, n_class> &buf,
+			 internal::node_assignment &assign) {
 
       /*
       buf.X.resize(dim);
@@ -922,7 +788,7 @@ namespace d2 {
       */
       buf.y.resize(sample_size);
       buf.sample_weight.resize(sample_size, 1.);
-      for (size_t i=0, j=0; i<sample_size; ++i) {
+      for (size_t i=0; i<sample_size; ++i) {
 	/*
 	for (size_t k=0; k<dim; ++k, ++j) {
 	  buf.X[k][i]=XX[j];
@@ -934,84 +800,31 @@ namespace d2 {
 	for (size_t i=0; i<sample_size; ++i) buf.sample_weight[i]=ss[i];
 	
 
-      buf.sorted_samples.resize(dim);
+      assign.sorted_samples.resize(dim);
       buf.inv_ind_sorted.resize(dim);
       buf.sample_mask_cache.resize(sample_size);
 #pragma omp parallel for
       for (size_t k=0; k<dim; ++k) {
-	auto &sorted_samples = buf.sorted_samples[k];
-	auto &inv_ind_sorted = buf.inv_ind_sorted[k];
-	sorted_samples.resize(sample_size);
-	inv_ind_sorted.resize(sample_size);
+	auto &sorted_samples = assign.sorted_samples[k];
+	//auto &inv_ind_sorted = buf.inv_ind_sorted[k];
+	sorted_samples = new internal::ss_deque_t(sample_size);
+	//inv_ind_sorted.resize(sample_size);
 	//const real_t * XX = &buf.X[k][0];
 	const real_t *XXX = XX + k;
 	for (size_t i=0; i<sample_size; ++i, XXX+=dim) {
-	  auto &sample = sorted_samples[i];
-	  sample.x = *XXX;
-	  sample.y = (unsigned short int) yy[i];
+	  auto &sample = (*sorted_samples)[i];
+	  sample = {*XXX, (unsigned short int) yy[i], i};
 	  /*
 	  if (ss)
 	    sample.weight = ss[i];
 	  else
 	    sample.weight = 1.;
 	  */
-	  sample.index = i;
 	}
 	// presort
-	std::sort(sorted_samples.begin(), sorted_samples.end(), internal::sorted_sample::cmp);
-
-	for (size_t i=0; i<sample_size; ++i) {
-	  inv_ind_sorted[sorted_samples[i].index] = i;
-	  if (i>0) {
-	    sorted_samples[i-1].next = &sorted_samples[i];
-	  }
-	}
+	std::sort(sorted_samples->begin(), sorted_samples->end(), internal::sorted_sample::cmp);
+	
       }      
-    }
-
-    void update_weight(const real_t *XX, const real_t *yy, const real_t *ss,
-		       const size_t sample_size,
-		       internal::buf_tree_constructor<dim, n_class> &buf) {
-      if (!ss) return;
-      //assert(buf.X.size() == dim);
-      //for (size_t k=0; k<dim; ++k) assert(buf.X[k].size() == sample_size);
-      assert(buf.y.size() == sample_size);
-      assert(buf.sample_weight.size() == sample_size);
-      for (size_t i=0, j=0; i<sample_size; ++i) {
-	/*
-	for (size_t k=0; k<dim; ++k, ++j) {
-	  assert(buf.X[k][i] == XX[j]);
-	}
-	*/
-	assert(buf.y[i] == (unsigned short int) yy[i]);
-	buf.sample_weight[i] = ss[i];
-      }
-      
-      assert(buf.sorted_samples.size() == dim);
-      assert(buf.inv_ind_sorted.size() == dim);
-      assert(buf.sample_mask_cache.size() == sample_size);
-      for (size_t k=0; k<dim; ++k) {
-	auto &sorted_samples = buf.sorted_samples[k];
-	auto &inv_ind_sorted = buf.inv_ind_sorted[k];
-	assert(sorted_samples.size() == sample_size);
-	assert(inv_ind_sorted.size() == sample_size);
-	// const real_t * XX = &buf.X[k][0];
-	for (size_t i=0; i<sample_size; ++i) {
-	  auto &sample = sorted_samples[i];
-	  size_t index = sample.index;
-	  /*
-	  assert(sample.x == XX[index]);
-	  assert(sample.y == (size_t) yy[index]);
-	  sample.weight = ss[index];
-	  */
-	}
-	for (size_t i=0; i<sample_size; ++i) {
-	  assert(inv_ind_sorted[sorted_samples[i].index] == i);
-	  if (i>0) {
-	    sorted_samples[i-1].next = &sorted_samples[i];
-	  }
-	}
-      }
     }
 
   };    
