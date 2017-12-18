@@ -327,7 +327,7 @@ namespace d2 {
 
       size_t label;
       for (size_t i=0; i<n;) {	
-	size_t ind = sample->index;
+	//size_t ind = sample->index;
 	const real_t current_x = sample->x;
 	size_t yy = label = sample->y;
 	while (i<n && (sample->x == current_x || yy == label /*|| w[ind] == 0 */)) {
@@ -338,7 +338,7 @@ namespace d2 {
 	  rb --; // -= ww;
 	  i++; sample = sample->next;
 	  if (sample) {
-	    ind = sample->index;
+	    //ind = sample->index;
 	    yy = sample->y;
 	  }
 	};
