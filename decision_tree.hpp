@@ -76,7 +76,7 @@ namespace d2 {
     template <size_t dim, size_t n_class>
     class _DTNode {
     public:
-      std::array<real_t, n_class> class_histogram = {}; ///< histogram of sample weights
+      std::array<real_t, n_class+1> class_histogram = {}; ///< histogram of sample weights
       /*! \brief get pointer to the leaf node by a given sample */
       virtual _DTLeaf<dim, n_class>* get_leafnode(const real_t *X) = 0;
       /*! \brief get resubstitution error */
@@ -308,45 +308,40 @@ namespace d2 {
 			  size_t &left_count,
 			  const bool presort,
 			  const size_t ii, // feature index
-			  const buf_tree_constructor<dim, n_class> &buf) {
+			  const buf_tree_constructor<dim, n_class> &buf,
+			  const std::array<real_t, n_class+1> &class_hist) {
       assert(presort);
       auto &y = buf.y; auto &w = buf.sample_weight;
       
       real_t best_goodness = 0;
 
       std::array<real_t, n_class+1> proportion_left = {};
-      std::array<real_t, n_class+1> proportion_right = {};
+      std::array<real_t, n_class+1> proportion_right(class_hist);
       auto &lb = proportion_left.back();
       auto &rb = proportion_right.back();
 
-      sorted_sample* _sample = sample;
-      for (size_t i=0; i<n; ++i) {
-	size_t &ind = _sample->index;
-	proportion_right[y[ind]] += w[ind];
-	_sample = _sample->next;
-      }      
-
-      for (size_t i=0; i<n_class; ++i) {
-	//	lb += proportion_left[i];
-	rb += proportion_right[i];
-      }
       const real_t no_split_score =criterion::op(proportion_right);
       const real_t total_weight = rb;
 
+      size_t label;
       for (size_t i=0; i<n;) {	
 	size_t ind = sample->index;
 	const real_t current_x = sample->x;
-	while (i<n && (sample->x == current_x /*|| w[ind] == 0 */)) {
-	  const size_t &yy=y[ind];
-	  const real_t ww=w[ind];
-	  proportion_left[yy]  += ww;
-	  lb += ww;
-	  proportion_right[yy] -= ww;
-	  rb -= ww;
+	size_t yy = label = y[ind];
+	while (i<n && (sample->x == current_x || yy == label /*|| w[ind] == 0 */)) {
+	  //const real_t ww=w[ind];
+	  proportion_left[yy] ++; // += ww;
+	  lb ++; // += ww;
+	  proportion_right[yy] --; // -= ww;
+	  rb --; // -= ww;
 	  i++; sample = sample->next;
-	  if (sample) ind = sample->index;
+	  if (sample) {
+	    ind = sample->index;
+	    yy=y[ind];
+	  }
 	};
 	if (i<n) {
+	  label = y[ind];
 	  const real_t goodness = no_split_score -
 	    ( criterion::op(proportion_left)  * (lb) +
 	      criterion::op(proportion_right) * (rb)) / total_weight;
@@ -403,16 +398,17 @@ namespace d2 {
       assert(assignment.size > 0);
 
       // compute the class histogram on the sample
-      std::array<real_t, n_class> class_hist = {};
+      std::array<real_t, n_class+1> class_hist = {};
       size_t *index=assignment.ptr;
       for (size_t ii = 0; ii < assignment.size; ++ii) {
-	class_hist[buf.y[index[ii]]] += buf.sample_weight[index[ii]];
+	class_hist[buf.y[index[ii]]] ++; // = buf.sample_weight[index[ii]];
       }
 
       // basic statistics regarding class histogram
       real_t* max_class_w = std::max_element(class_hist.begin(), class_hist.end()); 
       real_t  all_class_w = std::accumulate(class_hist.begin(), class_hist.end(), 0.);      
-
+      class_hist.back() = all_class_w;
+      
       // get the probability score
       real_t prob =  (*max_class_w) / (all_class_w);
       real_t r = (1 - *max_class_w / all_class_w);
@@ -480,7 +476,8 @@ namespace d2 {
 	    */
 	    sorted_sample *sorted_sample_ptr = &buf.sorted_samples[ii][min_index_cache[ii]];	    
 	    goodness[ii] = best_split_ptr<dim, n_class, criterion>
-	      (sorted_sample_ptr, assignment.size, cutoff[ii], left_count[ii], presort, ii, buf);
+	      (sorted_sample_ptr, assignment.size,
+	       cutoff[ii], left_count[ii], presort, ii, buf, class_hist);
 	  }
 	}
 	// pick the best goodness 
