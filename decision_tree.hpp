@@ -202,13 +202,15 @@ namespace d2 {
 
     /*! \brief data structure for a single sample
      */
+    /*
     struct sample {
       real_t x;
       size_t y;
       real_t weight;
       size_t index;
     };
-
+    */
+    
     /*! \brief data structure for additional linked list on presort samples
      */
     struct sorted_sample {
