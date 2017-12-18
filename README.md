@@ -1,5 +1,9 @@
 ## Depth-wise Induction of Decision Tree with Presorted Deque
 
+This is the proof-of-concept demo code for reproducing experiments in the arXiv note "A Faster Drop-in Implementation for Depth-wise Exact Greedy Induction of Decision Tree Using Pre-sorted Deque".
+
+
+
 
 Compile and test
 
@@ -11,3 +15,12 @@ time: 3.018330 seconds
 nleafs: 2216
 ```
 
+TODO
+
+- implement tree pruning
+- implement random forest
+- model serialization and communication
+
+
+----
+All rights reserved.

@@ -5,22 +5,33 @@
 using namespace d2;
 using namespace std;
 
+
+/* training sample size */
 #ifndef N
 #define N 1000000
 #endif
 
+/* testing sample size */
+#ifndef M
+#define M 0
+#endif
+
+/* dimension of features */
 #ifndef D
 #define D 28
 #endif
 
+/* number of classes */
 #ifndef NC
 #define NC 2
 #endif
 
+/* maximal depth */
 #ifndef MD
 #define MD 8
 #endif
 
+/* minimal sample weight (size) */
 #ifndef MW
 #define MW .0
 #endif
@@ -53,7 +64,7 @@ int main(int argc, char* argv[]) {
   X = new real_t[D*N];
   y = new real_t[N];
   //w = new real_t[N];
-  y_pred = new real_t[N];
+  y_pred = new real_t[M];
 
   if (argc == 1) {
     sample_naive_data(X, y, w);
@@ -84,7 +95,7 @@ int main(int argc, char* argv[]) {
   // training
   double start=getRealTime();
   classifier->fit(X, y, w, N);
-  printf("time: %lf seconds\n", getRealTime() - start);
+  printf("training time: %lf seconds\n", getRealTime() - start);
   printf("nleafs: %zu \n", classifier->root->get_leaf_count());
 
   if (argc == 1) {
@@ -94,6 +105,25 @@ int main(int argc, char* argv[]) {
 
     // output result
     printf("accuracy: %.3f\n", accuracy(y_pred, y, N) );  
+  } else if (argc == 3) {
+    assert(M < N);
+    ifstream test_fs;
+    test_fs.open(argv[2]);
+    for (auto i=0; i<M; ++i) {
+      string line;
+      getline(test_fs, line);
+      istringstream ss(line);
+      string number;
+      getline(ss, number, ',');
+      y[i] = stof(number);
+      for (auto j=0; j<D; ++j) {
+	getline(ss, number, ',');
+	X[i*D+j] = stof(number);
+      }
+    }
+    test_fs.close();
+    classifier->predict(X, M, y_pred);
+    printf("accuracy: %.3f\n", accuracy(y_pred, y, M) );      
   }
 
   delete [] X;
