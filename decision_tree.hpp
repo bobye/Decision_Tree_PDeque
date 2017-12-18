@@ -142,7 +142,7 @@ namespace d2 {
     public:
       _DTLeaf<dim, n_class>* get_leafnode(const real_t *X) {
 	assert(left && right);
-	if (X[index]<=cutoff) {
+	if (X[index]<cutoff) {
 	  return left->get_leafnode(X);
 	} else {
 	  return right->get_leafnode(X);
@@ -352,7 +352,7 @@ namespace d2 {
 	      criterion::op(proportion_right) * (rb)) / total_weight;
 	  if (goodness > best_goodness) {
 	    best_goodness = goodness;
-	    cutoff = current_x;
+	    cutoff = sample->x;
 	    left_count = i;
 	  }
 	}
