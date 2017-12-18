@@ -1,4 +1,4 @@
-## Depth-wise Induction of Decision Tree With Presorted Dequeue
+## Depth-wise Induction of Decision Tree With Presorted Deque
 
 
 Compile and test
