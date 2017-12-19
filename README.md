@@ -3,9 +3,14 @@
 This is the proof-of-concept demo code for reproducing experiments in the arXiv note "A Faster Drop-in Implementation for Depth-wise Exact Greedy Induction of Decision Tree Using Pre-sorted Deque".
 
 
+### Prepare sample data
+
+- download data from [HIGGS](https://archive.ics.uci.edu/ml/datasets/HIGGS) and uncompress gz file.
+- create training data `head -1000000 HIGGS.csv > higgs-train-1m.csv`
+- create testing data `tail -50000 HIGGS.csv > higgs-test.csv`
 
 
-Compile and test
+### Compile and test
 
 ```
 $ g++ -fopenmp -std=c++11 -O3 -msse2 -funroll-loops test_dt.cpp -o test_dt -lrt
