@@ -1,6 +1,8 @@
 ## Depth-wise Induction of Decision Tree with Presorted Deque
 
-This is the proof-of-concept demo code for reproducing experiments in the arXiv note "A Faster Drop-in Implementation for Depth-wise Exact Greedy Induction of Decision Tree Using Pre-sorted Deque".
+
+
+This is the proof-of-concept demo code for reproducing experiments in the arXiv note "A Faster Drop-in Implementation for Depth-wise Exact Greedy Induction of Decision Tree Using Pre-sorted Deque" (To appear).
 
 
 ### Prepare sample data
@@ -13,7 +15,7 @@ This is the proof-of-concept demo code for reproducing experiments in the arXiv 
 ### Compile and test
 
 ```
-$ g++ -fopenmp -std=c++11 -O3 -msse2 -funroll-loops test_dt.cpp -o test_dt -lrt
+$ g++ -fopenmp -std=c++11 -O3 -msse2 -funroll-loops test_dt.cpp -o test_dt -lrt \
   -D _D2_DOUBLE \
   -D N=1000000 \
   -D D=28 \
@@ -35,4 +37,4 @@ TODO
 
 
 ----
-All rights reserved.
+All rights reserved. Jianbo Ye
