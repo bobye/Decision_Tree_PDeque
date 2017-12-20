@@ -2,7 +2,7 @@
 
 
 
-This is the proof-of-concept demo code for reproducing experiments in the arXiv note "A Faster Drop-in Implementation for Depth-wise Exact Greedy Induction of Decision Tree Using Pre-sorted Deque" (To appear).
+This is the proof-of-concept demo code for reproducing experiments in the arXiv note "A Faster Drop-in Implementation for Depth-wise Exact Greedy Induction of Decision Tree Using Pre-sorted Deque" (https://arxiv.org/abs/1712.06989).
 
 
 ### Prepare sample data
