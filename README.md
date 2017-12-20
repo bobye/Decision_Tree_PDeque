@@ -23,10 +23,10 @@ $ g++ -fopenmp -std=c++11 -O3 -msse2 -funroll-loops test_dt.cpp -o test_dt -lrt 
   -D MW=100 \
   -D M=50000
 $ OMP_NUM_THREADS=28 ./test_dt higgs-train-1m.csv higgs-test.csv
-tree induction time: 1.465976 seconds
-training time: 2.395375 seconds
+tree induction time: 1.217055 seconds
+training time: 2.237200 seconds
 nleafs: 2216 
-accuracy: 0.710
+test accuracy: 0.710
 ```
 
 TODO
