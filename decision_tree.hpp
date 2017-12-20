@@ -295,9 +295,9 @@ namespace d2 {
 
     void inplace_split_ptr(std::deque<sorted_sample> &sample_deque,
 			   node_assignment &assignment) {
-      auto sample = sample_deque.begin();
-      for (size_t i=0; i<assignment.size; ++i, sample ++) {
-	assignment.ptr[i] = sample->index;
+#pragma omp parallel for
+      for (size_t i=0; i<assignment.size; ++i) {
+	assignment.ptr[i] = sample_deque[i].index;
       }
     }    
     template <size_t dim, size_t n_class, typename criterion>
@@ -317,10 +317,16 @@ namespace d2 {
       // compute the class histogram on the sample
       std::array<real_t, n_class+1> class_hist = {};
       size_t *index=assignment.ptr;
+#pragma omp parallel
+      {
+      std::array<real_t, n_class+1> class_hist_private = {};
+      #pragma omp for
       for (size_t ii = 0; ii < assignment.size; ++ii) {
-	class_hist[buf.y[index[ii]]] ++; // = buf.sample_weight[index[ii]];
+	class_hist_private[buf.y[index[ii]]] ++; // = buf.sample_weight[index[ii]];
       }
-
+      #pragma omp critical
+      { for (size_t c = 0; c < n_class; ++c) class_hist[c] += class_hist_private[c]; }
+      }
       // basic statistics regarding class histogram
       real_t* max_class_w = std::max_element(class_hist.begin(), class_hist.end()); 
       real_t  all_class_w = std::accumulate(class_hist.begin(), class_hist.end(), 0.);      
@@ -396,9 +402,11 @@ namespace d2 {
 	  aright.cache_offset = assignment.cache_offset + left_count[ii];
 
 	  if (presort) {
+#pragma omp parallel for
 	    for (size_t i=0; i<aleft.size; ++i) {
 	      buf.sample_mask_cache[aleft.ptr[i]] = 'l';
 	    }
+#pragma omp parallel for
 	    for (size_t i=0; i<aright.size; ++i){
 	      buf.sample_mask_cache[aright.ptr[i]]= 'r';
 	    }
