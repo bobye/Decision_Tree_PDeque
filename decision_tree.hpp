@@ -25,6 +25,11 @@ namespace d2 {
   //! \brief customizable template classes that extend the scope of decision tree implementations
   namespace def {
 
+    //! \brief the generic trait class for node statistics
+    //! a Stats class should contain:
+    //    (1) the sufficient statistics for supporting the calculation of the split criteria at each node
+    //    (2) the update rules of statistics, O(1) time, when a cutoff threshold at each node splitting is moving upwards
+    //    (3) the stop criterion of node splitting specific to the sufficient statistics
     template<class LT>
     struct Stats {
       typedef LT LabelType;
@@ -33,7 +38,9 @@ namespace d2 {
       virtual inline LabelType get_label() const = 0;
       virtual inline bool stop() const = 0;
     };
-    
+
+
+    //! \brief the Stats class for classification problems
     template <size_t n_class>
     struct ClassificationStats : public Stats<size_t> {
 
@@ -48,9 +55,7 @@ namespace d2 {
 	return *this;
       }
       
-      std::array<real_t, n_class+1> histogram;
       using Stats<size_t>::LabelType;
-      const size_t nc = n_class;
       
       inline LabelType get_label() const override {
 	return std::max_element(histogram.begin(), histogram.end()-1) - histogram.begin();
@@ -77,8 +82,13 @@ namespace d2 {
 	  (criterion::op(left)  * left.histogram.back() + criterion::op(right) * right.histogram.back())
 	  / (left.histogram.back() + right.histogram.back());
       }
+
+      // member variables
+      std::array<real_t, n_class+1> histogram;
+      const size_t nc = n_class;
     };
 
+    //! \todo implement regression tree
     struct RegressionStats {
       size_t count = 0;
       real_t sum = 0.;
@@ -148,21 +158,26 @@ namespace d2 {
     class _DTNode {
     public:
       YStats y_stats;
+
+      typedef _DTLeaf<dim, YStats> Leaf;
+      typedef _DTBranch<dim, YStats> Branch;
+
+      _DTNode(){}
+      _DTNode(const YStats &ys): y_stats(ys) {
+      }
       
       /*! \brief get pointer to the leaf node by a given sample */
-      virtual _DTLeaf<dim, YStats>* get_leafnode(const real_t *X) = 0;
-      /*! \brief get resubstitution error */
-      //virtual real_t get_R() = 0;
+      virtual Leaf* get_leafnode(const real_t *X) = 0;
+
       virtual size_t get_leaf_count() = 0;
+      
 #ifdef RABIT_RABIT_H_
       /*! \brief write data into a stream buffer */
       virtual void write(dmlc::Stream *fo) const = 0;
       /*! \brief read data from a stream buffer */
       virtual void read(dmlc::Stream *fi) = 0;
 #endif
-      //real_t score; ///< uncertainty score
-      //real_t weight; ///< node sample weight
-      //real_t r;///< resubstituion error
+
       int parent;
     };    
 
@@ -171,9 +186,16 @@ namespace d2 {
     template <size_t dim, class YStats>
     class _DTLeaf : public _DTNode<dim, YStats> {
     public:
+      using typename _DTNode<dim, YStats>::Leaf;
+      using typename _DTNode<dim, YStats>::Branch;
+      
       _DTLeaf(){}
+      _DTLeaf(const YStats &ys): _DTNode<dim, YStats>(ys) {
+	label = ys.get_label();
+      }
+      
       /*! \brief construct a new leaf node from a branch node */
-      _DTLeaf(const _DTBranch<dim, YStats> &that) {
+      _DTLeaf(const Branch &that) {
 	this->y_stats = that.y_stats;
 	//this->score = that.score;
 	//this->weight = that.weight;
@@ -181,13 +203,14 @@ namespace d2 {
 	this->parent = that.parent;
 	this->label = that.y_stats.get_label();
       }
-      _DTLeaf<dim, YStats>* get_leafnode(const real_t *X) {
+      Leaf* get_leafnode(const real_t *X) {
 	return this;
       }
-      //real_t get_R() {return this->r;}
       size_t get_leaf_count() {return 1.;}
+      
 #ifdef RABIT_RABIT_H_
       void write(dmlc::Stream *fo) const {
+	//! \todo implement serialization for YStats
 	//fo->Write(&this->class_histogram[0], sizeof(real_t) * n_class);
 	fo->Write(&this->score, sizeof(real_t));
 	fo->Write(&this->weight, sizeof(real_t));
@@ -196,6 +219,7 @@ namespace d2 {
 	fo->Write(&this->parent, sizeof(int));
       }
       void read(dmlc::Stream *fi) {
+	//! \todo implement serialization for YStats
 	//fi->Read(&this->class_histogram[0], sizeof(real_t) * n_class);
 	fi->Read(&this->score, sizeof(real_t));
 	fi->Read(&this->weight, sizeof(real_t));
@@ -204,7 +228,7 @@ namespace d2 {
 	fi->Read(&this->parent, sizeof(int));
       }
 #endif
-      size_t label;
+      typename YStats::LabelType label;
     };
 
     /*! \brief branch node in decision tree
@@ -212,7 +236,13 @@ namespace d2 {
     template <size_t dim, class YStats>
     class _DTBranch : public _DTNode<dim, YStats> {
     public:
-      _DTLeaf<dim, YStats>* get_leafnode(const real_t *X) {
+      using typename _DTNode<dim, YStats>::Leaf;
+      using typename _DTNode<dim, YStats>::Branch;
+
+      _DTBranch (size_t i, real_t cto): index(i), cutoff(cto) {
+      }
+
+      Leaf* get_leafnode(const real_t *X) {
 	assert(left && right);
 	if (X[index]<cutoff) {
 	  return left->get_leafnode(X);
@@ -220,13 +250,14 @@ namespace d2 {
 	  return right->get_leafnode(X);
 	}
       }
-      real_t get_R() { R=left->get_R() + right->get_R(); return R;}
+
       size_t get_leaf_count() {
 	n_leafs = left->get_leaf_count() + right->get_leaf_count();
 	return n_leafs;
       }
 #ifdef RABIT_RABIT_H_
       void write(dmlc::Stream *fo) const {
+	//! \todo implement serialization for YStats
 	//fo->Write(&this->class_histogram[0], sizeof(real_t) * n_class);
 	fo->Write(&this->score, sizeof(real_t));
 	fo->Write(&this->weight, sizeof(real_t));
@@ -240,6 +271,7 @@ namespace d2 {
 	fo->Write(&this->n_leafs, sizeof(size_t));
       }
       void read(dmlc::Stream *fi) {
+	//! \todo implement serialization for YStats
 	//fi->Read(&this->class_histogram[0], sizeof(real_t) * n_class);
 	fi->Read(&this->score, sizeof(real_t));
 	fi->Read(&this->weight, sizeof(real_t));
@@ -257,7 +289,6 @@ namespace d2 {
       int nleft = -1, nright = -1;
       size_t index;
       real_t cutoff;
-      real_t R;
       size_t n_leafs;
     };
 
@@ -383,14 +414,6 @@ namespace d2 {
       for (size_t ii = 0; ii < assignment.size; ++ii) {
 	y_stats.update_left(buf.y[index[ii]]);
       }
-      // basic statistics regarding class histogram
-      //real_t* max_class_w = std::max_element(class_hist.begin(), class_hist.end()); 
-      //real_t  all_class_w = std::accumulate(class_hist.begin(), class_hist.end(), 0.);      
-      //class_hist.back() = all_class_w;
-      
-      // get the probability score
-      //real_t prob =  (*max_class_w) / (all_class_w);
-      //real_t r = (1 - *max_class_w / all_class_w);
       if (assignment.size == 1 || 
 	  assignment.depth == buf.max_depth || 
 	  //r < 2 / all_class_w || 
@@ -398,19 +421,14 @@ namespace d2 {
 	  y_stats.stop()
 	  ) {
 	// if the condtion to create a leaf node is satisfied
-	_DTLeaf<dim, YStats> *leaf = new _DTLeaf<dim, YStats>();
-	leaf->y_stats = y_stats;
-	leaf->label = y_stats.get_label();
-	//leaf->score = criterion::loss(prob);
-	//leaf->weight = all_class_w;
-	//leaf->r = r * leaf->weight;
+	_DTLeaf<dim, YStats> *leaf = new _DTLeaf<dim, YStats>(y_stats);
 	return leaf;
       } else {
 	// if it is possible to create a branch node
 	std::array<real_t, dim> goodness = {};
 	std::array<real_t, dim> cutoff   = {};
 	std::array<size_t, dim> left_count = {};
-	// std::array<size_t, dim> min_index_cache = {};
+
 	// compute goodness split score across different dimensions
 	//	if (dim_index >= 0) printf("cached index: %d\n", dim_index);
 #pragma omp parallel for
@@ -425,27 +443,19 @@ namespace d2 {
 	}
 	// pick the best goodness 
 	real_t* best_goodness = std::max_element(goodness.begin(), goodness.end());
+	size_t ii = best_goodness - goodness.begin();
+	
 	if (dim_index >= 0) assert(best_goodness - goodness.begin() == dim_index || *best_goodness == 0);
 	if (*best_goodness == 0 ||
-	    left_count[best_goodness - goodness.begin()] < buf.min_leaf_weight ||
-	    left_count[best_goodness - goodness.begin()] > assignment.size - buf.min_leaf_weight) {
+	    left_count[ii] < buf.min_leaf_weight ||
+	    left_count[ii] > assignment.size - buf.min_leaf_weight) {
 	  // if the best goodness is not good enough, a leaf node is still created
-	  _DTLeaf<dim, YStats> *leaf = new _DTLeaf<dim, YStats>();
-	  leaf->y_stats = y_stats;
-	  leaf->label = y_stats.get_label();
-	  //leaf->score = criterion::loss(prob);
-	  //leaf->weight = all_class_w;
-	  //leaf->r = r * leaf->weight;
+	  _DTLeaf<dim, YStats> *leaf = new _DTLeaf<dim, YStats>(y_stats);
+
 	  return leaf;
 	} else {
 	  // otherwise, create a branch node subject to the picked dimension/goodness
-	  _DTBranch<dim, YStats> *branch = new _DTBranch<dim, YStats>();
-	  size_t ii = best_goodness - goodness.begin();
-	  branch->index = ii;
-	  branch->cutoff = cutoff[ii];
-	  //branch->score = criterion::loss(prob);
-	  //branch->weight = all_class_w;
-	  //branch->r = r * branch->weight;
+	  _DTBranch<dim, YStats> *branch = new _DTBranch<dim, YStats>(ii, cutoff[ii]);
 
 	  inplace_split_ptr(*assignment.sorted_samples[ii], assignment);
 
@@ -523,7 +533,6 @@ namespace d2 {
       }
       return r;
     }
-    
     template <size_t dim, class YStats, typename criterion>
     _DTNode<dim, YStats>* build_tree(size_t sample_size,
 				      buf_tree_constructor<dim> &_buf,
