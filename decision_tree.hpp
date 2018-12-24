@@ -703,10 +703,9 @@ namespace d2 {
   
   /*! \brief the decision tree class that is currently used in marriage learning framework 
    */
-  template <size_t dim, size_t n_class, typename criterion>
+  template <size_t dim, class YStats, typename criterion>
   class Decision_Tree {
   public:
-    static const size_t NUMBER_OF_CLASSES = n_class;
 
     void init() {
       leaf_arr.clear();
@@ -766,7 +765,7 @@ namespace d2 {
       //printf("finish presorting!\n");
       
       double start=getRealTime();
-      root = build_tree<dim, def::ClassificationStats<n_class>, criterion>(sample_size, buf, assign, leaf_arr, branch_arr, true);
+      root = build_tree<dim, YStats, criterion>(sample_size, buf, assign, leaf_arr, branch_arr, true);
       printf("tree induction time: %lf seconds\n", getRealTime() - start);
 
       if (sparse) {
@@ -781,9 +780,9 @@ namespace d2 {
     inline void set_max_depth(size_t depth) { max_depth = depth; }
     inline void set_min_leaf_weight(real_t weight) { min_leaf_weight = weight; }
 
-    typedef internal::_DTNode<dim, def::ClassificationStats<n_class> > Node;
-    typedef internal::_DTLeaf<dim, def::ClassificationStats<n_class> > LeafNode;
-    typedef internal::_DTBranch<dim, def::ClassificationStats<n_class> > BranchNode;
+    typedef internal::_DTNode<dim, YStats > Node;
+    typedef internal::_DTLeaf<dim, YStats > LeafNode;
+    typedef internal::_DTBranch<dim, YStats > BranchNode;
 
 #ifdef RABIT_RABIT_H_
     typedef rabit::utils::MemoryBufferStream MemoryBufferStream;
@@ -908,4 +907,3 @@ namespace d2 {
 }
 
 #endif /* _D2_DECISION_TREE_H_ */
-

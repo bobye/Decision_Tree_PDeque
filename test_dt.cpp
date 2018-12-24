@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) {
 
 
   // create classifier
-  auto classifier = new Decision_Tree<D, NC, def::gini>();
+  auto classifier = new Decision_Tree<D, def::ClassificationStats<NC>, def::gini>();
   classifier->init();
   classifier->set_max_depth(MD);
   classifier->set_min_leaf_weight(MW);
