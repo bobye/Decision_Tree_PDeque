@@ -43,6 +43,9 @@ namespace d2 {
     //! \brief the Stats class for classification problems
     template <size_t n_class>
     struct ClassificationStats : public Stats<size_t> {
+      // member variables
+      std::array<real_t, n_class+1> histogram;
+      const size_t nc = n_class;
 
       ClassificationStats (): histogram({}) {
       }
@@ -83,18 +86,55 @@ namespace d2 {
 	  / (left.histogram.back() + right.histogram.back());
       }
 
-      // member variables
-      std::array<real_t, n_class+1> histogram;
-      const size_t nc = n_class;
     };
 
-    //! \todo implement regression tree
-    struct RegressionStats {
-      size_t count = 0;
-      real_t sum = 0.;
-      typedef real_t LabelType;
-      inline LabelType get_label() {
-	return sum / count;
+    template <typename Type>
+    struct RegressionStats : Stats<real_t> {
+      size_t count;
+      Type sum;
+      Type sum_sq;
+
+      using Stats<real_t>::LabelType;
+
+      RegressionStats(): count(0), sum(0), sum_sq(0) {}
+
+      RegressionStats(const RegressionStats & that): 
+	count(that.count), sum(that.sum), sum_sq(that.sum_sq) {
+      }
+
+      RegressionStats & operator=(const RegressionStats & that) {
+	count = that.count;
+	sum = that.sum;
+	sum_sq = that.sum_sq;
+	return *this;
+      }
+
+      inline LabelType get_label() const override {
+	return (LabelType) sum / (LabelType) count;
+      }
+
+      inline void update_left(LabelType y) override {
+	count ++;
+	sum += (Type) y;
+	sum_sq += (Type) y * (Type) y;
+      }
+
+      inline void update_right(LabelType y) override {
+	count --;
+	sum -= (Type) y;
+	sum_sq -= (Type) y * (Type) y;
+      }
+
+      inline bool stop() const override {
+	// todo
+	return false;
+      }
+
+      template <class criterion>
+      inline static real_t goodness_score(const RegressionStats<Type> left, const RegressionStats<Type> right) {
+	return
+	  (criterion::op(left)  * left.count + criterion::op(right) * right.count)
+	  / (left.count + right.count);
       }
     };
 
@@ -104,14 +144,14 @@ namespace d2 {
       template <size_t n_class>
       static inline real_t op(const ClassificationStats<n_class> &y_stats) {
 	auto &proportion = y_stats.histogram;
-	real_t total_weight_sqr;
-	total_weight_sqr = proportion.back() * proportion.back();
-	//if (total_weight_sqr <= 0) return 1.;
+	real_t total_weight_sq;
+	total_weight_sq = proportion.back() * proportion.back();
+	//if (total_weight_sq <= 0) return 1.;
 
-	real_t gini = total_weight_sqr;
+	real_t gini = total_weight_sq;
 	for (size_t i = 0; i<n_class; ++i)
 	  gini -= proportion[i] * proportion[i];
-	gini /= total_weight_sqr;
+	gini /= total_weight_sq;
 	return gini;
       }
       static inline real_t loss(const real_t &x) {return 1-x;}
@@ -138,6 +178,16 @@ namespace d2 {
 	return entropy;
       }
       static inline real_t loss(const real_t &x) {return -log(x);}
+    };
+
+    /*! \brief mean square error function
+     */
+    struct mse {
+      template <typename Type>
+      static inline real_t op(const RegressionStats<Type> &y_stats) {
+	real_t mean = (real_t) y_stats.sum / (real_t) y_stats.count;
+	return (real_t) y_stats.sum_sq / (real_t) y_stats.count - mean * mean;
+      }
     };
   }
 

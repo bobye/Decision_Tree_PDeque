@@ -53,6 +53,7 @@ void sample_naive_data(real_t *X, real_t *y, real_t *w) {
 real_t accuracy(real_t *y_pred, real_t *y_true, size_t n) {
   size_t k=0;
   for (size_t i=0; i<n; ++i)
+    //if ((int) (y_pred[i]>0.5) == y_true[i]) ++k;
     if (y_pred[i] == y_true[i]) ++k;
   return (real_t) k / (real_t) n;
 }
@@ -89,6 +90,8 @@ int main(int argc, char* argv[]) {
 
   // create classifier
   auto classifier = new Decision_Tree<D, def::ClassificationStats<NC>, def::gini>();
+  //auto classifier = new Decision_Tree<D, def::RegressionStats<size_t>, def::mse>();
+  
   classifier->init();
   classifier->set_max_depth(MD);
   classifier->set_min_leaf_weight(MW);
