@@ -1,4 +1,7 @@
 #include "decision_tree.hpp"
+#include "classification.hpp"
+#include "regression.hpp"
+
 #include <random>
 #include <fstream>
 #include <sstream>
