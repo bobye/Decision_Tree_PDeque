@@ -15,14 +15,7 @@ This is the proof-of-concept demo code for reproducing experiments in the arXiv 
 ### Compile and test
 
 ```
-$ g++ -fopenmp -std=c++11 -O3 -msse2 -funroll-loops test_dt.cpp -o test_dt -lrt \
-  -D _D2_SINGLE \
-  -D N=1000000 \
-  -D D=28 \
-  -D MD=32 \
-  -D MW=100 \
-  -D M=50000 \
-  -D USE_D2_CLTYPE
+$ make
 $ OMP_NUM_THREADS=28 ./test_dt higgs-train-1m.csv higgs-test.csv
 tree induction time: 1.217055 seconds
 training time: 2.237200 seconds
