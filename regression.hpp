@@ -66,6 +66,24 @@ namespace d2 {
       }
     };
   }
+
+  namespace internal {
+    template <class YStats>
+    struct sorted_sample;
+
+    template <typename Type>
+    struct sorted_sample<def::RegressionStats<Type> > {
+      real_t x;
+      real_t y;
+      //      real_t weight;
+      size_t index;
+      //sorted_sample *next;
+      inline static bool cmp(const sorted_sample<def::RegressionStats<Type> > &a, 
+			     const sorted_sample<def::RegressionStats<Type> > &b) {
+	return a.x < b.x;
+      }
+    };
+  }
 }
 
 #endif /* _REGRESSION_H_ */

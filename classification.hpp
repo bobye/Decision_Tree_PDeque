@@ -4,6 +4,8 @@
 #include "traits.hpp"
 
 #include <array>
+#include <cassert>
+#include <cmath>
 
 namespace d2 {
   namespace def {
@@ -98,6 +100,24 @@ namespace d2 {
     };
 
 
+  }
+
+  namespace internal {
+    template <class YStats>
+    struct sorted_sample;
+
+    template <size_t n_class>
+    struct sorted_sample<def::ClassificationStats<n_class> > {
+      real_t x;
+      unsigned short int y;
+      //      real_t weight;
+      size_t index;
+      //sorted_sample *next;
+      inline static bool cmp(const sorted_sample<def::ClassificationStats<n_class> > &a, 
+			     const sorted_sample<def::ClassificationStats<n_class> > &b) {
+	return a.x < b.x;
+      }
+    };
   }
 }
 

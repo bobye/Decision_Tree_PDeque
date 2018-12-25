@@ -3,6 +3,9 @@
 
 #include "common.hpp"
 #include "timer.h"
+#include "classification.hpp"
+#include "regression.hpp"
+#include "day_sharpe.hpp"
 
 // stl headers
 #include <algorithm>
@@ -173,16 +176,7 @@ namespace d2 {
     /*! \brief data structure for additional linked list on presort samples
      */
     template <class YStats>
-    struct sorted_sample {
-      real_t x;
-      typename YStats::LabelType y;
-      //      real_t weight;
-      size_t index;
-      //sorted_sample *next;
-      inline static bool cmp(const sorted_sample<YStats> &a, const sorted_sample<YStats> &b) {
-	return a.x < b.x;
-      }
-    };
+    struct sorted_sample;
 
     /*! \brief node assignment data structure stores
      * the indexes of sample data

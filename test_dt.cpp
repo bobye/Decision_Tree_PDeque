@@ -1,7 +1,4 @@
 #include "decision_tree.hpp"
-#include "classification.hpp"
-#include "regression.hpp"
-#include "day_sharpe.hpp"
 
 #include <random>
 #include <fstream>
