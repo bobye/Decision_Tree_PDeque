@@ -3,9 +3,7 @@
 
 #include "common.hpp"
 #include "timer.h"
-#include "classification.hpp"
-#include "regression.hpp"
-#include "day_sharpe.hpp"
+#include "traits.hpp"
 
 // stl headers
 #include <algorithm>
@@ -24,8 +22,6 @@
 
 namespace d2 {
   namespace internal {
-    template <size_t dim, class YStats> class _DTLeaf;
-    template <size_t dim, class YStats> class _DTBranch;
 
     struct _DT {
       constexpr static real_t prior_weight = 0.00;
@@ -173,11 +169,6 @@ namespace d2 {
     };
 
     
-    /*! \brief data structure for additional linked list on presort samples
-     */
-    template <class YStats>
-    struct sorted_sample;
-
     /*! \brief node assignment data structure stores
      * the indexes of sample data
      */
@@ -788,5 +779,9 @@ namespace d2 {
 
   };    
 }
+
+#include "classification.hpp"
+#include "regression.hpp"
+#include "day_sharpe.hpp"
 
 #endif /* _D2_DECISION_TREE_H_ */

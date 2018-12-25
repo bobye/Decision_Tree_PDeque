@@ -20,5 +20,15 @@ namespace d2 {
     };
 
   }
+
+  namespace internal {
+    /*! \brief data structure for additional linked list on presort samples
+     */
+    template <class YStats> struct sorted_sample;
+
+    template <size_t dim, class YStats> class _DTLeaf;
+    template <size_t dim, class YStats> class _DTBranch;
+
+  }
 }
 #endif /* _TRAITS_H_ */

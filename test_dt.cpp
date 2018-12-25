@@ -37,13 +37,18 @@ using namespace std;
 #define MW .0
 #endif
 
-typedef unsigned short int label_t;
+#ifdef USE_D2_CLTYPE
+typedef _D2_CLTYPE d2_label_t;
+#elif defined USE_D2_RGTYPE
+typedef _D2_RGTYPE d2_label_t;
+#endif
 
 template <typename LabelType>
 void sample_naive_data(real_t *X, LabelType *y, real_t *w);
 
+
 template <>
-void sample_naive_data<unsigned short int>(real_t *X, unsigned short int *y, real_t *w) {
+void sample_naive_data<_D2_CLTYPE>(real_t *X, _D2_CLTYPE *y, real_t *w) {
   for (size_t i=0; i<N; ++i) {
     y[i] = rand() % 2;
     if (y[i]) {
@@ -57,28 +62,51 @@ void sample_naive_data<unsigned short int>(real_t *X, unsigned short int *y, rea
   }  
 }
 
-template <typename LabelType>
-real_t metric(LabelType *y_pred, LabelType *y_true, size_t n);
+template <>
+void sample_naive_data<_D2_RGTYPE>(real_t *X, _D2_RGTYPE *y, real_t *w) {
+  for (size_t i=0; i<N; ++i) {
+    y[i] = rand() % 2;
+    if (y[i]) {
+      for (size_t j=0; j<D; ++j)
+	X[i*D+j]=(real_t) rand() / (real_t) RAND_MAX;
+    } else {
+      for (size_t j=0; j<D; ++j)
+	X[i*D+j]=(real_t) rand() / (real_t) RAND_MAX - .1;
+    }
+    if (w) w[i] = 1.; // (real_t) rand() / (real_t) RAND_MAX;
+  }  
+}
+
+template <typename LabelType1, typename LabelType2>
+real_t metric(LabelType1 *y_pred, LabelType2 *y_true, size_t n);
 
 
 template <>
-real_t metric<unsigned short int>(unsigned short int *y_pred, unsigned short int *y_true, size_t n) {
+real_t metric<_D2_CLTYPE, _D2_CLTYPE>(_D2_CLTYPE *y_pred, _D2_CLTYPE *y_true, size_t n) {
   size_t k=0;
   for (size_t i=0; i<n; ++i)
     if (y_pred[i] == y_true[i]) ++k;
   return (real_t) k / (real_t) n;
 }
 
+template <>
+real_t metric<real_t, _D2_RGTYPE>(real_t *y_pred, _D2_RGTYPE *y_true, size_t n) {
+  size_t k=0;
+  for (size_t i=0; i<n; ++i)
+    if ((_D2_RGTYPE) (y_pred[i] > 0.5) == y_true[i]) ++k;
+  return (real_t) k / (real_t) n;
+}
+
 int main(int argc, char* argv[]) {
 
   real_t *X, *w=NULL;
-  label_t *y, *y_pred;
+  d2_label_t *y, *y_pred;
 
   // prepare naive training data
   X = new real_t[D*N];
-  y = new label_t[N];
+  y = new d2_label_t[N];
   //w = new real_t[N];
-  y_pred = new label_t[M];
+  y_pred = new d2_label_t[M];
 
   if (argc == 1) {
     sample_naive_data(X, y, w);
@@ -91,7 +119,7 @@ int main(int argc, char* argv[]) {
       istringstream ss(line);
       string number;
       getline(ss, number, ',');
-      y[i] = (label_t) stof(number);
+      y[i] = (d2_label_t) stof(number);
       for (auto j=0; j<D; ++j) {
 	getline(ss, number, ',');
 	X[i*D+j] = stof(number);
@@ -102,8 +130,11 @@ int main(int argc, char* argv[]) {
 
 
   // create classifier
+#if USE_D2_CLTYPE
   auto classifier = new Decision_Tree<D, def::ClassificationStats<NC>, def::gini>();
-  //auto classifier = new Decision_Tree<D, def::RegressionStats<size_t>, def::mse>();
+#elif USE_D2_RGTYPE
+  auto classifier = new Decision_Tree<D, def::RegressionStats, def::mse>();
+#endif
   
   classifier->init();
   classifier->set_max_depth(MD);

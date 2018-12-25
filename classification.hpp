@@ -7,11 +7,14 @@
 #include <cassert>
 #include <cmath>
 
+
+#define _D2_CLTYPE unsigned short int
+
 namespace d2 {
   namespace def {
     //! \brief the Stats class for classification problems
     template <size_t n_class>
-    struct ClassificationStats : public Stats<unsigned short int> {
+    struct ClassificationStats : public Stats<_D2_CLTYPE> {
       // member variables
       std::array<real_t, n_class+1> histogram;
       const size_t nc = n_class;
@@ -103,8 +106,6 @@ namespace d2 {
   }
 
   namespace internal {
-    template <class YStats>
-    struct sorted_sample;
 
     template <size_t n_class>
     struct sorted_sample<def::ClassificationStats<n_class> > {

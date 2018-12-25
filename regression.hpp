@@ -3,16 +3,17 @@
 
 #include "traits.hpp"
 
+#define _D2_RGTYPE real_t
+
 namespace d2 {
   //! \brief customizable template classes that extend the scope of decision tree implementations
   namespace def {
-    template <typename Type>
-    struct RegressionStats : Stats<real_t> {
+    struct RegressionStats : Stats<_D2_RGTYPE> {
+      using LabelType = Stats<_D2_RGTYPE>::LabelType;
       size_t count;
-      Type sum;
-      Type sum_sq;
+      LabelType sum;
+      LabelType sum_sq;
 
-      using LabelType = Stats<real_t>::LabelType;
 
       RegressionStats(): count(0), sum(0), sum_sq(0) {}
 
@@ -33,14 +34,14 @@ namespace d2 {
 
       inline void update_left(LabelType y) override {
 	count ++;
-	sum += (Type) y;
-	sum_sq += (Type) y * (Type) y;
+	sum += y;
+	sum_sq += y * y;
       }
 
       inline void update_right(LabelType y) override {
 	count --;
-	sum -= (Type) y;
-	sum_sq -= (Type) y * (Type) y;
+	sum -= y;
+	sum_sq -= y * y;
       }
 
       inline bool stop() const override {
@@ -49,7 +50,7 @@ namespace d2 {
       }
 
       template <class criterion>
-      inline static real_t goodness_score(const RegressionStats<Type> left, const RegressionStats<Type> right) {
+      inline static real_t goodness_score(const RegressionStats left, const RegressionStats right) {
 	return
 	  (criterion::op(left)  * left.count + criterion::op(right) * right.count)
 	  / (left.count + right.count);
@@ -59,8 +60,7 @@ namespace d2 {
     /*! \brief mean square error function
      */
     struct mse {
-      template <typename Type>
-      static inline real_t op(const RegressionStats<Type> &y_stats) {
+      static inline real_t op(const RegressionStats &y_stats) {
 	real_t mean = (real_t) y_stats.sum / (real_t) y_stats.count;
 	return (real_t) y_stats.sum_sq / (real_t) y_stats.count - mean * mean;
       }
@@ -68,18 +68,15 @@ namespace d2 {
   }
 
   namespace internal {
-    template <class YStats>
-    struct sorted_sample;
-
-    template <typename Type>
-    struct sorted_sample<def::RegressionStats<Type> > {
+    template <>
+    struct sorted_sample<def::RegressionStats > {
       real_t x;
       real_t y;
       //      real_t weight;
       size_t index;
       //sorted_sample *next;
-      inline static bool cmp(const sorted_sample<def::RegressionStats<Type> > &a, 
-			     const sorted_sample<def::RegressionStats<Type> > &b) {
+      inline static bool cmp(const sorted_sample<def::RegressionStats > &a, 
+			     const sorted_sample<def::RegressionStats > &b) {
 	return a.x < b.x;
       }
     };
