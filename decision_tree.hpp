@@ -24,7 +24,6 @@ namespace d2 {
     template <size_t dim, class YStats> class _DTLeaf;
     template <size_t dim, class YStats> class _DTBranch;
 
-
     struct _DT {
       constexpr static real_t prior_weight = 0.00;
     };
@@ -173,13 +172,14 @@ namespace d2 {
     
     /*! \brief data structure for additional linked list on presort samples
      */
+    template <class YStats>
     struct sorted_sample {
       real_t x;
-      unsigned short int y;
+      typename YStats::LabelType y;
       //      real_t weight;
       size_t index;
       //sorted_sample *next;
-      inline static bool cmp(const sorted_sample &a, const sorted_sample &b) {
+      inline static bool cmp(const sorted_sample<YStats> &a, const sorted_sample<YStats> &b) {
 	return a.x < b.x;
       }
     };
@@ -187,10 +187,16 @@ namespace d2 {
     /*! \brief node assignment data structure stores
      * the indexes of sample data
      */
-    typedef std::deque<sorted_sample> ss_deque_t;
+    template <class YStats>
+    struct ss_deque_t: public std::deque<sorted_sample<YStats> > {
+      ss_deque_t(): std::deque<sorted_sample<YStats> >() {}
+      ss_deque_t(const size_t n): std::deque<sorted_sample<YStats> >(n) {}
+    };
+
+    template <class YStats>
     struct node_assignment {
       size_t * ptr; ///< index array
-      std::vector<ss_deque_t*> sorted_samples;
+      std::vector<ss_deque_t<YStats> *> sorted_samples;
       size_t size; ///< size of index array      
       size_t cache_offset; ///< offset to the cache array head, aka (ptr - cache_offset) should be constant
       int idx_cache_index;
@@ -205,16 +211,16 @@ namespace d2 {
 
     /*! \brief the whole data structure used in building the decision trees
      */
-    template <size_t dim>    
+    template <size_t dim, class YStats>    
     struct buf_tree_constructor {      
       //std::vector<std::vector<real_t> > X; ///< store data in coordinate-order
-      std::vector<unsigned short int> y;
+      std::vector<typename YStats::LabelType> y;
       std::vector<real_t> sample_weight;
       size_t max_depth;
       real_t min_leaf_weight;
       bool warm_start = false;
       //std::vector<sample> sample_cache;
-      std::stack<std::tuple<node_assignment, int> > tree_stack;
+      std::stack<std::tuple<node_assignment<YStats>, int> > tree_stack;
 
       // decision tree with presort
       //std::vector<std::vector<sorted_sample> > sorted_samples;
@@ -224,7 +230,7 @@ namespace d2 {
     
 
     template <size_t dim, class YStats, typename criterion>
-    real_t best_split_ptr(std::deque<sorted_sample> &sample_deque,
+    real_t best_split_ptr(std::deque<sorted_sample<YStats> > &sample_deque,
 			  size_t n,
 			  real_t &cutoff,
 			  size_t &left_count,
@@ -264,18 +270,20 @@ namespace d2 {
       return best_goodness;
     }
 
-    void inplace_split_ptr(std::deque<sorted_sample> &sample_deque,
-			   node_assignment &assignment) {
+
+    template <class YStats>
+    void inplace_split_ptr(std::deque<sorted_sample<YStats> > &sample_deque,
+			   node_assignment<YStats> &assignment) {
 #pragma omp parallel for
       for (size_t i=0; i<assignment.size; ++i) {
 	assignment.ptr[i] = sample_deque[i].index;
       }
     }    
     template <size_t dim, class YStats, typename criterion>
-    _DTNode<dim, YStats>  *build_dtnode(node_assignment &assignment,
-					node_assignment &aleft,
-					node_assignment &aright,
-					buf_tree_constructor<dim> &buf,
+    _DTNode<dim, YStats>  *build_dtnode(node_assignment<YStats> &assignment,
+					node_assignment<YStats> &aleft,
+					node_assignment<YStats> &aright,
+					buf_tree_constructor<dim, YStats> &buf,
 					const bool presort,
 					const int dim_index = -1) {
       // default: return leaf node
@@ -362,8 +370,8 @@ namespace d2 {
 	      auto &ass = assignment.sorted_samples[ii];
 	      auto &left = aleft.sorted_samples[ii];
 	      auto &right = aright.sorted_samples[ii];
-	      left = new ss_deque_t();
-	      right = new ss_deque_t();
+	      left = new ss_deque_t<YStats>();
+	      right = new ss_deque_t<YStats>();
 	      for (size_t i=0; i<assignment.size; ++i) {
 		auto &sorted_sample = ass->front();
 		char mask = buf.sample_mask_cache[sorted_sample.index];
@@ -413,11 +421,11 @@ namespace d2 {
     }
     template <size_t dim, class YStats, typename criterion>
     _DTNode<dim, YStats>* build_tree(size_t sample_size,
-				      buf_tree_constructor<dim> &_buf,
-				      node_assignment &assign,
-				      std::vector<internal::_DTLeaf<dim, YStats> > &leaf_arr,
-				      std::vector<internal::_DTBranch<dim, YStats> > &branch_arr,
-				      const bool presort) {
+				     buf_tree_constructor<dim, YStats> &_buf,
+				     node_assignment<YStats> &assign,
+				     std::vector<internal::_DTLeaf<dim, YStats> > &leaf_arr,
+				     std::vector<internal::_DTBranch<dim, YStats> > &branch_arr,
+				     const bool presort) {
       std::vector<index_cache> index_arr;
       if (_buf.warm_start && branch_arr.size() > 0) {
 	for (size_t ii = 0; ii < branch_arr.size(); ++ii) {
@@ -448,7 +456,7 @@ namespace d2 {
       std::vector<size_t> root_index(sample_size);
       for (size_t i=0; i<sample_size; ++i) root_index[i] = i;
       // create the node_assignment at root node and push into stack
-      node_assignment &root_assignment = assign;
+      node_assignment<YStats> &root_assignment = assign;
       root_assignment.ptr = &root_index[0];
       root_assignment.size = sample_size;
       root_assignment.cache_offset = 0;
@@ -470,7 +478,7 @@ namespace d2 {
 	auto cur_assignment = std::get<0>(cur_tree);
 	int cur_parent = std::get<1>(cur_tree);
 
-	node_assignment assignment_left, assignment_right;
+	node_assignment<YStats> assignment_left, assignment_right;
 	_DTNode<dim, YStats> *node;
 	if (_buf.warm_start && cur_assignment.idx_cache_index >= 0)
 	  node = build_dtnode<dim, YStats, criterion> (cur_assignment,
@@ -701,8 +709,8 @@ namespace d2 {
     
     Node *root = nullptr;
   private:
-    internal::buf_tree_constructor<dim> buf;
-    internal::node_assignment assign;
+    internal::buf_tree_constructor<dim, YStats> buf;
+    internal::node_assignment<YStats> assign;
     std::vector<LeafNode> leaf_arr; 
     std::vector<BranchNode> branch_arr;
     size_t max_depth = 10;
@@ -733,8 +741,8 @@ namespace d2 {
 #endif
     void prepare_presort(const real_t *XX, const real_t *yy, const real_t* ss,
 			 const size_t sample_size,
-			 internal::buf_tree_constructor<dim> &buf,
-			 internal::node_assignment &assign) {
+			 internal::buf_tree_constructor<dim, YStats> &buf,
+			 internal::node_assignment<YStats> &assign) {
 
       /*
       buf.X.resize(dim);
@@ -748,7 +756,7 @@ namespace d2 {
 	  buf.X[k][i]=XX[j];
 	}
 	*/
-	buf.y[i]=(unsigned short int) yy[i];
+	buf.y[i]=(typename YStats::LabelType) yy[i];
       }
       if (ss)
 	for (size_t i=0; i<sample_size; ++i) buf.sample_weight[i]=ss[i];
@@ -761,13 +769,13 @@ namespace d2 {
       for (size_t k=0; k<dim; ++k) {
 	auto &sorted_samples = assign.sorted_samples[k];
 	//auto &inv_ind_sorted = buf.inv_ind_sorted[k];
-	sorted_samples = new internal::ss_deque_t(sample_size);
+	sorted_samples = new internal::ss_deque_t<YStats>(sample_size);
 	//inv_ind_sorted.resize(sample_size);
 	//const real_t * XX = &buf.X[k][0];
 	const real_t *XXX = XX + k;
 	for (size_t i=0; i<sample_size; ++i, XXX+=dim) {
 	  auto &sample = (*sorted_samples)[i];
-	  sample = {*XXX, (unsigned short int) yy[i], i};
+	  sample = {*XXX, (typename YStats::LabelType) yy[i], i};
 	  /*
 	  if (ss)
 	    sample.weight = ss[i];
@@ -776,7 +784,7 @@ namespace d2 {
 	  */
 	}
 	// presort
-	std::sort(sorted_samples->begin(), sorted_samples->end(), internal::sorted_sample::cmp);
+	std::sort(sorted_samples->begin(), sorted_samples->end(), internal::sorted_sample<YStats>::cmp);
 	
       }      
     }

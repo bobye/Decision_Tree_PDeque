@@ -12,7 +12,7 @@ namespace d2 {
       Type sum;
       Type sum_sq;
 
-      using Stats<real_t>::LabelType;
+      using LabelType = Stats<real_t>::LabelType;
 
       RegressionStats(): count(0), sum(0), sum_sq(0) {}
 

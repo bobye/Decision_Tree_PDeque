@@ -9,7 +9,7 @@ namespace d2 {
   namespace def {
     //! \brief the Stats class for classification problems
     template <size_t n_class>
-    struct ClassificationStats : public Stats<size_t> {
+    struct ClassificationStats : public Stats<unsigned short int> {
       // member variables
       std::array<real_t, n_class+1> histogram;
       const size_t nc = n_class;
@@ -25,7 +25,7 @@ namespace d2 {
 	return *this;
       }
       
-      using Stats<size_t>::LabelType;
+      using LabelType = Stats<unsigned short int>::LabelType;
       
       inline LabelType get_label() const override {
 	return std::max_element(histogram.begin(), histogram.end()-1) - histogram.begin();
