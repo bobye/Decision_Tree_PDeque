@@ -37,7 +37,9 @@ using namespace std;
 #define MW .0
 #endif
 
-void sample_naive_data(real_t *X, real_t *y, real_t *w) {
+typedef unsigned short int label_t;
+
+void sample_naive_data(real_t *X, label_t *y, real_t *w) {
   for (size_t i=0; i<N; ++i) {
     y[i] = rand() % 2;
     if (y[i]) {
@@ -51,7 +53,7 @@ void sample_naive_data(real_t *X, real_t *y, real_t *w) {
   }  
 }
 
-real_t accuracy(real_t *y_pred, real_t *y_true, size_t n) {
+real_t accuracy(label_t *y_pred, label_t *y_true, size_t n) {
   size_t k=0;
   for (size_t i=0; i<n; ++i)
     //if ((int) (y_pred[i]>0.5) == y_true[i]) ++k;
@@ -60,13 +62,15 @@ real_t accuracy(real_t *y_pred, real_t *y_true, size_t n) {
 }
 
 int main(int argc, char* argv[]) {
-  real_t *X, *y, *w=NULL, *y_pred;
+
+  real_t *X, *w=NULL;
+  label_t *y, *y_pred;
 
   // prepare naive training data
   X = new real_t[D*N];
-  y = new real_t[N];
+  y = new label_t[N];
   //w = new real_t[N];
-  y_pred = new real_t[M];
+  y_pred = new label_t[M];
 
   if (argc == 1) {
     sample_naive_data(X, y, w);
@@ -79,7 +83,7 @@ int main(int argc, char* argv[]) {
       istringstream ss(line);
       string number;
       getline(ss, number, ',');
-      y[i] = stof(number);
+      y[i] = (label_t) stof(number);
       for (auto j=0; j<D; ++j) {
 	getline(ss, number, ',');
 	X[i*D+j] = stof(number);

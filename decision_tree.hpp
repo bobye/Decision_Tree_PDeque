@@ -586,12 +586,13 @@ namespace d2 {
   template <size_t dim, class YStats, typename criterion>
   class Decision_Tree {
   public:
+    typedef typename YStats::LabelType label_t;
 
     void init() {
       leaf_arr.clear();
       branch_arr.clear();
     }
-    void predict(const real_t *X, const size_t n, real_t *y) const {
+    void predict(const real_t *X, const size_t n, label_t *y) const {
       const real_t* x = X;
       assert(root);
       for (size_t i=0; i<n; ++i, x+=dim) {
@@ -600,19 +601,21 @@ namespace d2 {
       }
     };
     
-    int fit(const real_t *X, const real_t *y, const real_t *sample_weight, const size_t n,
+    int fit(const real_t *X, const label_t *y, 
+	    const real_t *sample_weight, const size_t n,
 	    bool sparse = false) {
       assert(X && y && !(sparse && !sample_weight));
       using namespace internal;
-      
       // convert sparse data to dense
-      const real_t *XX, *yy, *ss;
+      const real_t *XX, *ss;
+      const label_t *yy;
+
       size_t sample_size;
       if (sparse) {
 	size_t nz = 0;
 	for (size_t i = 0; i<n; ++i) nz += sample_weight[i] > 0;
 	real_t* XX_ = new real_t [nz * dim];
-	real_t* yy_ = new real_t [nz];
+	label_t* yy_ = new label_t [nz];
 	real_t* ss_ = new real_t [nz];
 	size_t count = 0;
 	for (size_t i = 0; i<n; ++i)
@@ -733,7 +736,7 @@ namespace d2 {
       }
     }
 #endif
-    void prepare_presort(const real_t *XX, const real_t *yy, const real_t* ss,
+    void prepare_presort(const real_t *XX, const label_t *yy, const real_t* ss,
 			 const size_t sample_size,
 			 internal::buf_tree_constructor<dim, YStats> &buf,
 			 internal::node_assignment<YStats> &assign) {
@@ -750,7 +753,7 @@ namespace d2 {
 	  buf.X[k][i]=XX[j];
 	}
 	*/
-	buf.y[i]=(typename YStats::LabelType) yy[i];
+	buf.y[i] = yy[i];
       }
       if (ss)
 	for (size_t i=0; i<sample_size; ++i) buf.sample_weight[i]=ss[i];
@@ -769,7 +772,7 @@ namespace d2 {
 	const real_t *XXX = XX + k;
 	for (size_t i=0; i<sample_size; ++i, XXX+=dim) {
 	  auto &sample = (*sorted_samples)[i];
-	  sample = {*XXX, (typename YStats::LabelType) yy[i], i};
+	  sample = {*XXX, yy[i], i};
 	  /*
 	  if (ss)
 	    sample.weight = ss[i];
