@@ -23,12 +23,13 @@ nleafs: 2216
 test accuracy: 0.710
 ```
 
-TODO
-
-- implement tree pruning
-- implement random forest
-- model serialization and communication
-
-
+### Other tests on synthetic data
+```
+$ OMP_NUM_THREADS=8 ./test_dt
+tree induction time: 2.715179 seconds
+training time: 4.514815 seconds
+nleafs: 33
+test accuracy: 0.973
+```
 ----
 All rights reserved. Jianbo Ye

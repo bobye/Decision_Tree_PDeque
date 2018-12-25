@@ -108,7 +108,7 @@ int main(int argc, char* argv[]) {
   classifier->predict(X, M, y_pred);
 
   // output result
-  printf("test accuracy: %.3f\n", metric(y_pred, y, M) );  
+  printf("test metric: %.3f\n", metric(y_pred, y, M) );  
 
   delete [] X;
   delete [] y;
