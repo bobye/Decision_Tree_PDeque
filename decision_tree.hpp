@@ -230,7 +230,8 @@ namespace d2 {
       
       const real_t no_split_score =criterion::op(y_stats);
 
-      size_t label, i=0;
+      size_t i=0;
+      typename YStats::LabelType label;
       for (auto sample = sample_deque.begin(); sample != sample_deque.end();) {	
 	const real_t current_x = sample->x;
 	typename YStats::LabelType yy = label = sample->y;

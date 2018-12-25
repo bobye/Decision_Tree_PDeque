@@ -44,12 +44,12 @@ typedef _D2_RGTYPE d2_label_t;
 #endif
 
 template <typename LabelType>
-void sample_naive_data(real_t *X, LabelType *y, real_t *w);
+void sample_naive_data(real_t *X, LabelType *y, real_t *w, size_t n);
 
 
 template <>
-void sample_naive_data<_D2_CLTYPE>(real_t *X, _D2_CLTYPE *y, real_t *w) {
-  for (size_t i=0; i<N; ++i) {
+void sample_naive_data<_D2_CLTYPE>(real_t *X, _D2_CLTYPE *y, real_t *w, size_t n) {
+  for (size_t i=0; i<n; ++i) {
     y[i] = rand() % 2;
     if (y[i]) {
       for (size_t j=0; j<D; ++j)
@@ -63,8 +63,8 @@ void sample_naive_data<_D2_CLTYPE>(real_t *X, _D2_CLTYPE *y, real_t *w) {
 }
 
 template <>
-void sample_naive_data<_D2_RGTYPE>(real_t *X, _D2_RGTYPE *y, real_t *w) {
-  for (size_t i=0; i<N; ++i) {
+void sample_naive_data<_D2_RGTYPE>(real_t *X, _D2_RGTYPE *y, real_t *w, size_t n) {
+  for (size_t i=0; i<n; ++i) {
     y[i] = rand() % 2;
     if (y[i]) {
       for (size_t j=0; j<D; ++j)
@@ -77,12 +77,12 @@ void sample_naive_data<_D2_RGTYPE>(real_t *X, _D2_RGTYPE *y, real_t *w) {
   }  
 }
 
-template <typename LabelType1, typename LabelType2>
-real_t metric(LabelType1 *y_pred, LabelType2 *y_true, size_t n);
+template <typename LabelType>
+real_t metric(LabelType *y_pred, LabelType *y_true, size_t n);
 
 
 template <>
-real_t metric<_D2_CLTYPE, _D2_CLTYPE>(_D2_CLTYPE *y_pred, _D2_CLTYPE *y_true, size_t n) {
+real_t metric<_D2_CLTYPE>(_D2_CLTYPE *y_pred, _D2_CLTYPE *y_true, size_t n) {
   size_t k=0;
   for (size_t i=0; i<n; ++i)
     if (y_pred[i] == y_true[i]) ++k;
@@ -90,7 +90,7 @@ real_t metric<_D2_CLTYPE, _D2_CLTYPE>(_D2_CLTYPE *y_pred, _D2_CLTYPE *y_true, si
 }
 
 template <>
-real_t metric<real_t, _D2_RGTYPE>(real_t *y_pred, _D2_RGTYPE *y_true, size_t n) {
+real_t metric<_D2_RGTYPE>(_D2_RGTYPE *y_pred, _D2_RGTYPE *y_true, size_t n) {
   size_t k=0;
   for (size_t i=0; i<n; ++i)
     if ((_D2_RGTYPE) (y_pred[i] > 0.5) == y_true[i]) ++k;
@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
   y_pred = new d2_label_t[M];
 
   if (argc == 1) {
-    sample_naive_data(X, y, w);
+    sample_naive_data(X, y, w, N);
   } else {
     ifstream train_fs;
     train_fs.open(argv[1]);
@@ -147,11 +147,11 @@ int main(int argc, char* argv[]) {
 
   if (argc == 1) {
     // prepare naive testing data
-    sample_naive_data(X, y, w);
-    classifier->predict(X, N, y_pred);
+    sample_naive_data(X, y, w, M);
+    classifier->predict(X, M, y_pred);
 
     // output result
-    printf("test accuracy: %.3f\n", metric(y_pred, y, N) );  
+    printf("test accuracy: %.3f\n", metric(y_pred, y, M) );  
   } else if (argc == 3) {
     assert(M < N);
     ifstream test_fs;

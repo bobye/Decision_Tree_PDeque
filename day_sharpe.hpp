@@ -4,6 +4,7 @@
 
 #include "traits.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <vector>
 
@@ -24,16 +25,22 @@ namespace d2 {
       return m1 / sqrt(m2 - m1*m1);
     }
     
-    typedef std::pair<real_t, size_t> reward_date_pair;
+    struct reward_date_pair {
+      real_t reward;
+      size_t date;
+      bool operator==(const reward_date_pair &that) {
+	return reward == that.reward;
+      }
+    };
     
     template <size_t days>
     struct DaySharpeStats: Stats<reward_date_pair> {
       size_t count;
       std::array<real_t, days> forward_return;
 
-      DaySharpeStats() {}
+      DaySharpeStats(): count(0), forward_return({}) {}
       
-      DaySharpeStats(const DaySharpeStats<days> &that): count(that.count), forward_return(forward_return) {}
+      DaySharpeStats(const DaySharpeStats<days> &that): count(that.count), forward_return(that.forward_return) {}
 
       DaySharpeStats<days> & operator=(const DaySharpeStats<days> &that) {
 	count = that.count;
@@ -44,17 +51,16 @@ namespace d2 {
       using Stats<reward_date_pair>::LabelType;
       
       inline LabelType get_label() const override {
-	return std::make_pair(std::max(_sharpe_helper(this->forward_return), 0), 
-			      std::numeric_limits<std::size_t>::max());
+	return {std::max(_sharpe_helper(this->forward_return), (real_t) 0.), std::numeric_limits<std::size_t>::max()};
       }
 
       inline void update_left(LabelType y) override {
-	forward_return[y.second] += y.first;
+	forward_return[y.date] += y.reward;
 	count ++;
       }
 
       inline void update_right(LabelType y) override {
-	forward_return[y.second] -= y.first;
+	forward_return[y.date] -= y.reward;
 	count --;
       }
       
@@ -72,7 +78,7 @@ namespace d2 {
     struct sharpe {
       template <size_t days>
       static inline real_t op(const DaySharpeStats<days> &y_stats) {
-	return _sharpe_helper(y_stats->forward_return);
+	return _sharpe_helper(y_stats.forward_return);
       }
     };
   }
