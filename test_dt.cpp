@@ -39,7 +39,11 @@ using namespace std;
 
 typedef unsigned short int label_t;
 
-void sample_naive_data(real_t *X, label_t *y, real_t *w) {
+template <typename LabelType>
+void sample_naive_data(real_t *X, LabelType *y, real_t *w);
+
+template <>
+void sample_naive_data<unsigned short int>(real_t *X, unsigned short int *y, real_t *w) {
   for (size_t i=0; i<N; ++i) {
     y[i] = rand() % 2;
     if (y[i]) {
@@ -53,10 +57,14 @@ void sample_naive_data(real_t *X, label_t *y, real_t *w) {
   }  
 }
 
-real_t accuracy(label_t *y_pred, label_t *y_true, size_t n) {
+template <typename LabelType>
+real_t metric(LabelType *y_pred, LabelType *y_true, size_t n);
+
+
+template <>
+real_t metric<unsigned short int>(unsigned short int *y_pred, unsigned short int *y_true, size_t n) {
   size_t k=0;
   for (size_t i=0; i<n; ++i)
-    //if ((int) (y_pred[i]>0.5) == y_true[i]) ++k;
     if (y_pred[i] == y_true[i]) ++k;
   return (real_t) k / (real_t) n;
 }
@@ -112,7 +120,7 @@ int main(int argc, char* argv[]) {
     classifier->predict(X, N, y_pred);
 
     // output result
-    printf("test accuracy: %.3f\n", accuracy(y_pred, y, N) );  
+    printf("test accuracy: %.3f\n", metric(y_pred, y, N) );  
   } else if (argc == 3) {
     assert(M < N);
     ifstream test_fs;
@@ -131,7 +139,7 @@ int main(int argc, char* argv[]) {
     }
     test_fs.close();
     classifier->predict(X, M, y_pred);
-    printf("test accuracy: %.3f\n", accuracy(y_pred, y, M) );      
+    printf("test metric: %.3f\n", metric(y_pred, y, M) );      
   }
 
   delete [] X;
