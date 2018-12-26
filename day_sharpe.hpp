@@ -14,7 +14,7 @@ namespace d2 {
 
     template <size_t days>
     real_t _sharpe_helper (const std::array<real_t, days> &fr) {
-      real_t m1 = 0, m2 = 1E-10;
+      real_t m1 = 0, m2 = 0;
       for (size_t i = 0; i< days; ++i) {
 	m1 += fr[i];
 	m2 += fr[i] * fr[i];
@@ -22,8 +22,8 @@ namespace d2 {
 
       m1 = m1 / days;
       m2 = m2 / days;
-
-      return - m1 / sqrt(m2 - m1*m1);
+      
+      return  - m1 / (sqrt(m2 - m1*m1) + 1E-10);
     }
     
     struct reward_date_pair {
@@ -57,7 +57,7 @@ namespace d2 {
       using Stats<reward_date_pair>::LabelType;
       
       inline LabelType get_label() const override {
-	return {std::max(_sharpe_helper(this->forward_return), (real_t) 0.), std::numeric_limits<std::size_t>::max()};
+	return {std::min(_sharpe_helper(this->forward_return), (real_t) 0.), std::numeric_limits<std::size_t>::max()};
       }
 
       inline void update_left(LabelType y) override {

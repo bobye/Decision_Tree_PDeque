@@ -58,7 +58,7 @@ void sample_naive_data<reward_date_pair>(real_t *X, reward_date_pair *y, real_t 
   for (size_t i=0; i<n; ++i) {
     y[i].reward = 2* (rand() % 2) - 1;
     y[i].date   = rand() % DAYS;
-    if (y[i].reward) {
+    if (((int) y[i].reward +1)/2) {
       for (size_t j=0; j<D; ++j)
 	X[i*D+j]=(real_t) rand() / (real_t) RAND_MAX;
     } else {
