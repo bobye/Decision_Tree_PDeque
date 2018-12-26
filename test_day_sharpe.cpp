@@ -110,6 +110,7 @@ int main(int argc, char* argv[]) {
       }
     }
     train_fs.close();
+    std::cout << "finished data load!" << std::endl;
   }
 
   auto classifier = new Decision_Tree<D, DaySharpeStats<DAYS>, sharpe>();

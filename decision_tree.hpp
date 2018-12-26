@@ -484,7 +484,10 @@ namespace d2 {
 
       
       // start to travel a tree construction using a stack
+      auto current_sample_size_not_in_leaf = sample_size;
+      
       while (!tree_stack.empty()) { 
+	std::cout << "fetch data from the top node of stack ... " << std::flush;
 	auto cur_tree = tree_stack.top(); 
 	auto cur_assignment = std::get<0>(cur_tree);
 	int cur_parent = std::get<1>(cur_tree);
@@ -508,6 +511,7 @@ namespace d2 {
 	tree_stack.pop();
 	bool is_branch;
 	if (assignment_left.ptr && assignment_right.ptr) {// spanning the tree	  
+	  std::cout << "branching" << std::endl;
 	  assignment_left.depth = cur_assignment.depth + 1;
 	  assignment_right.depth = cur_assignment.depth + 1;
 	  if (_buf.warm_start && cur_assignment.idx_cache_index >= 0) {
@@ -523,6 +527,8 @@ namespace d2 {
 	  tree_stack.push(std::make_tuple(assignment_right,branch_arr.size()));	  
 	  branch_arr.push_back(std::move(*static_cast<_DTBranch<dim, YStats>* > (node)));	  
 	} else {
+	  current_sample_size_not_in_leaf -= cur_assignment.size;
+	  std::cout << "reaching a leaf (" << current_sample_size_not_in_leaf << ")" << std::endl;
 	  is_branch = false;
 	  leaf_arr.push_back(std::move(*static_cast<_DTLeaf<dim, YStats>* > (node))); 
 	}
