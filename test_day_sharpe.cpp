@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) {
   X = new real_t[D*N];
   y = new d2_label_t[N];
   //w = new real_t[N];
-  y_pred = new d2_label_t[M];
+  y_pred = new d2_label_t[N];
 
   if (argc == 1) {
     sample_naive_data(X, y, w, N);
