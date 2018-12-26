@@ -132,13 +132,15 @@ int main(int argc, char* argv[]) {
   if (argc == 1) {
     sample_naive_data(X, y, w, M);
     classifier->predict(X, M, y_pred);
+    // output result
+    printf("test sharpe: %.3f\n", -metric(y_pred, y, M) );  
   } else {
     // use training set to compute sharpe
-    classifier->predict(X, M, y_pred);
+    classifier->predict(X, N, y_pred);
+    // output result
+    printf("test sharpe: %.3f\n", -metric(y_pred, y, N) );  
   }
 
-  // output result
-  printf("test sharpe: %.3f\n", -metric(y_pred, y, M) );  
 
   delete [] X;
   delete [] y;
