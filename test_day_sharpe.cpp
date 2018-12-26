@@ -56,7 +56,7 @@ real_t metric(LabelType *y_pred, LabelType *y_true, size_t n);
 template <>
 void sample_naive_data<reward_date_pair>(real_t *X, reward_date_pair *y, real_t *w, size_t n) {
   for (size_t i=0; i<n; ++i) {
-    y[i].reward = rand() % 2;
+    y[i].reward = 2* (rand() % 2) - 1;
     y[i].date   = rand() % DAYS;
     if (y[i].reward) {
       for (size_t j=0; j<D; ++j)
@@ -90,7 +90,27 @@ int main(int argc, char* argv[]) {
   //w = new real_t[N];
   y_pred = new d2_label_t[M];
 
-  sample_naive_data(X, y, w, N);
+  if (argc == 1) {
+    sample_naive_data(X, y, w, N);
+  } else {
+    ifstream train_fs;
+    train_fs.open(argv[1]);
+    for (auto i=0; i<N; ++i) {
+      string line;
+      getline(train_fs, line);
+      istringstream ss(line);
+      string number;
+      getline(ss, number, ',');
+      y[i].reward = (real_t) stof(number);
+      getline(ss, number, ',');
+      y[i].date = (size_t) stoi(number);
+      for (auto j=0; j<D; ++j) {
+	getline(ss, number, ',');
+	X[i*D+j] = stof(number);
+      }
+    }
+    train_fs.close();
+  }
 
   auto classifier = new Decision_Tree<D, DaySharpeStats<DAYS>, sharpe>();
 
@@ -104,11 +124,21 @@ int main(int argc, char* argv[]) {
   printf("training time: %lf seconds\n", getRealTime() - start);
   printf("nleafs: %zu \n", classifier->root->get_leaf_count());
 
-  sample_naive_data(X, y, w, M);
-  classifier->predict(X, M, y_pred);
+  std::ostringstream oss;
+  classifier->dotgraph(oss);
+  std::cout << oss.str() << std::endl;
+
+  if (argc == 1) {
+    sample_naive_data(X, y, w, M);
+    classifier->predict(X, M, y_pred);
+  } else {
+    // use training set to compute sharpe
+    classifier->predict(X, M, y_pred);
+  }
 
   // output result
   printf("test metric: %.3f\n", metric(y_pred, y, M) );  
+  printf("test sharpe: %.3f\n", -metric(y_pred, y, M) );  
 
   delete [] X;
   delete [] y;

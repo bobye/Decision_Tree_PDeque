@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <vector>
 
 namespace d2 {
@@ -22,7 +23,7 @@ namespace d2 {
       m1 = m1 / days;
       m2 = m2 / days;
 
-      return m1 / sqrt(m2 - m1*m1);
+      return - m1 / sqrt(m2 - m1*m1);
     }
     
     struct reward_date_pair {
@@ -32,6 +33,11 @@ namespace d2 {
 	return reward == that.reward;
       }
     };
+
+    std::ostream & operator << (std::ostream &out, const reward_date_pair &p) {
+      out << p.reward;
+      return out;
+    }
     
     template <size_t days>
     struct DaySharpeStats: Stats<reward_date_pair> {
@@ -71,7 +77,7 @@ namespace d2 {
 
       template <class criterion>
       inline static real_t goodness_score(const DaySharpeStats<days> left, const DaySharpeStats<days> right) {
-	return std::max(criterion::op(left), criterion::op(right));
+	return std::min(criterion::op(left), criterion::op(right));
       }
     };
 

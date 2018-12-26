@@ -11,6 +11,7 @@
 #include <cmath>
 #include <iostream>
 #include <numeric>
+#include <sstream>
 #include <stack>
 #include <tuple>
 #include <utility>
@@ -54,6 +55,14 @@ namespace d2 {
       virtual void read(dmlc::Stream *fi) = 0;
 #endif
 
+      std::string hashCode() const {
+	std::stringstream ss;
+	ss << (void const *) this;
+	return ss.str();
+      }
+
+      virtual void dotgraph(std::ostream &f) const = 0;
+
       int parent;
     };    
 
@@ -64,7 +73,8 @@ namespace d2 {
     public:
       using typename _DTNode<dim, YStats>::Leaf;
       using typename _DTNode<dim, YStats>::Branch;
-      
+      using _DTNode<dim, YStats>::hashCode;
+
       _DTLeaf(){}
       _DTLeaf(const YStats &ys): _DTNode<dim, YStats>(ys) {
 	label = ys.get_label();
@@ -83,6 +93,10 @@ namespace d2 {
 	return this;
       }
       size_t get_leaf_count() {return 1.;}
+      
+      void dotgraph(std::ostream &f) const {
+	f << "node" << hashCode() << " [label=\"" << label << "\", shape=box, style=filled ]\n";
+      }
       
 #ifdef RABIT_RABIT_H_
       void write(dmlc::Stream *fo) const {
@@ -114,6 +128,7 @@ namespace d2 {
     public:
       using typename _DTNode<dim, YStats>::Leaf;
       using typename _DTNode<dim, YStats>::Branch;
+      using _DTNode<dim, YStats>::hashCode;
 
       _DTBranch (size_t i, real_t cto): index(i), cutoff(cto) {
       }
@@ -131,6 +146,16 @@ namespace d2 {
 	n_leafs = left->get_leaf_count() + right->get_leaf_count();
 	return n_leafs;
       }
+
+      void dotgraph(std::ostream &f) const {
+	assert(left && right);
+	left->dotgraph(f);
+	right->dotgraph(f);
+
+	f << "node" << hashCode() << " [label=\"x" << index << " < " << cutoff << "?\", style=filled]\n";
+	f << "node" << hashCode() << " -> node" <<  left->hashCode() << " [label=\"yes\"]\n node" <<  hashCode() << " -> node" << right->hashCode() << "[label=\"no\"]\n";
+      }
+
 #ifdef RABIT_RABIT_H_
       void write(dmlc::Stream *fo) const {
 	//! \todo implement serialization for YStats
@@ -592,6 +617,13 @@ namespace d2 {
 	y[i] = leaf->label;
       }
     };
+
+    void dotgraph(std::ostream &f) {
+      assert(root);
+      f << "digraph G {\n";
+      root->dotgraph(f);
+      f << "}\n";
+    }
     
     int fit(const real_t *X, const label_t *y, 
 	    const real_t *sample_weight, const size_t n,
