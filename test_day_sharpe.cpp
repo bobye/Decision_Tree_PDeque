@@ -137,7 +137,6 @@ int main(int argc, char* argv[]) {
   }
 
   // output result
-  printf("test metric: %.3f\n", metric(y_pred, y, M) );  
   printf("test sharpe: %.3f\n", -metric(y_pred, y, M) );  
 
   delete [] X;
