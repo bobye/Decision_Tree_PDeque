@@ -48,12 +48,10 @@ namespace d2 {
 
       virtual size_t get_leaf_count() = 0;
       
-#ifdef RABIT_RABIT_H_
       /*! \brief write data into a stream buffer */
-      virtual void write(dmlc::Stream *fo) const = 0;
+      virtual void write(std::ostream *fo) const = 0;
       /*! \brief read data from a stream buffer */
-      virtual void read(dmlc::Stream *fi) = 0;
-#endif
+      virtual void read(std::istream *fi) = 0;
 
       std::string hashCode() const {
 	std::stringstream ss;
@@ -98,26 +96,16 @@ namespace d2 {
 	f << "node" << hashCode() << " [label=\"" << label << "\", shape=box, style=filled ]\n";
       }
       
-#ifdef RABIT_RABIT_H_
-      void write(dmlc::Stream *fo) const {
-	//! \todo implement serialization for YStats
-	//fo->Write(&this->class_histogram[0], sizeof(real_t) * n_class);
-	fo->Write(&this->score, sizeof(real_t));
-	fo->Write(&this->weight, sizeof(real_t));
-	fo->Write(&this->label, sizeof(size_t));
-	fo->Write(&this->r, sizeof(real_t));
-	fo->Write(&this->parent, sizeof(int));
+      void write(std::ostream *fo) const {
+	
+	fo->write((const char *) &this->label, sizeof(typename YStats::LabelType));
+	fo->write((const char *) &this->parent, sizeof(int));
       }
-      void read(dmlc::Stream *fi) {
-	//! \todo implement serialization for YStats
-	//fi->Read(&this->class_histogram[0], sizeof(real_t) * n_class);
-	fi->Read(&this->score, sizeof(real_t));
-	fi->Read(&this->weight, sizeof(real_t));
-	fi->Read(&this->label, sizeof(size_t));
-	fi->Read(&this->r, sizeof(real_t));
-	fi->Read(&this->parent, sizeof(int));
+      void read(std::istream *fi) {
+	fi->read((char *) &this->label, sizeof(typename YStats::LabelType));
+	fi->read((char *) &this->parent, sizeof(int));
       }
-#endif
+
       typename YStats::LabelType label;
     };
 
@@ -130,6 +118,8 @@ namespace d2 {
       using typename _DTNode<dim, YStats>::Branch;
       using _DTNode<dim, YStats>::hashCode;
 
+
+      _DTBranch () {};
       _DTBranch (size_t i, real_t cto): index(i), cutoff(cto) {
       }
 
@@ -156,36 +146,24 @@ namespace d2 {
 	f << "node" << hashCode() << " -> node" <<  left->hashCode() << " [label=\"yes\"]\n node" <<  hashCode() << " -> node" << right->hashCode() << "[label=\"no\"]\n";
       }
 
-#ifdef RABIT_RABIT_H_
-      void write(dmlc::Stream *fo) const {
-	//! \todo implement serialization for YStats
-	//fo->Write(&this->class_histogram[0], sizeof(real_t) * n_class);
-	fo->Write(&this->score, sizeof(real_t));
-	fo->Write(&this->weight, sizeof(real_t));
-	fo->Write(&this->nleft, sizeof(int));
-	fo->Write(&this->nright, sizeof(int));
-	fo->Write(&this->index, sizeof(size_t));
-	fo->Write(&this->cutoff, sizeof(real_t));
-	fo->Write(&this->r, sizeof(real_t));
-	fo->Write(&this->R, sizeof(real_t));
-	fo->Write(&this->parent, sizeof(int));
-	fo->Write(&this->n_leafs, sizeof(size_t));
+
+      void write(std::ostream *fo) const {
+	fo->write((const char *) &this->nleft, sizeof(int));
+	fo->write((const char *) &this->nright, sizeof(int));
+	fo->write((const char *) &this->index, sizeof(size_t));
+	fo->write((const char *) &this->cutoff, sizeof(real_t));
+	fo->write((const char *) &this->parent, sizeof(int));
+	fo->write((const char *) &this->n_leafs, sizeof(size_t));
       }
-      void read(dmlc::Stream *fi) {
-	//! \todo implement serialization for YStats
-	//fi->Read(&this->class_histogram[0], sizeof(real_t) * n_class);
-	fi->Read(&this->score, sizeof(real_t));
-	fi->Read(&this->weight, sizeof(real_t));
-	fi->Read(&this->nleft, sizeof(int));
-	fi->Read(&this->nright, sizeof(int));
-	fi->Read(&this->index, sizeof(size_t));
-	fi->Read(&this->cutoff, sizeof(real_t));
-	fi->Read(&this->r, sizeof(real_t));
-	fi->Read(&this->R, sizeof(real_t));
-	fi->Read(&this->parent, sizeof(int));
-	fi->Read(&this->n_leafs, sizeof(size_t));
+      void read(std::istream *fi) {
+	fi->read((char *) &this->nleft, sizeof(int));
+	fi->read((char *) &this->nright, sizeof(int));
+	fi->read((char *) &this->index, sizeof(size_t));
+	fi->read((char *) &this->cutoff, sizeof(real_t));
+	fi->read((char *) &this->parent, sizeof(int));
+	fi->read((char *) &this->n_leafs, sizeof(size_t));
       }
-#endif
+
       _DTNode<dim, YStats> *left=nullptr, *right=nullptr;
       int nleft = -1, nright = -1;
       size_t index;
@@ -733,6 +711,40 @@ namespace d2 {
       rabit::Barrier();	      
     }
 #endif
+
+    /*! \brief helper function that caches data to stream */
+    inline void save(std::ostream * fo) {
+      size_t n_leaf = leaf_arr.size();
+      size_t n_branch = branch_arr.size();
+      fo->write((const char *) &n_leaf, sizeof(size_t));
+      fo->write((const char *) &n_branch, sizeof(size_t));
+
+      for (const LeafNode &leaf : leaf_arr) {
+	leaf.write(fo);
+      }
+      for (const BranchNode &branch : branch_arr) {
+	branch.write(fo);
+      }
+    }
+    /*! \brief helper function that restores data from stream */
+    inline void load(std::istream * fi) {
+      size_t n_leaf;
+      size_t n_branch;
+      fi->read((char*) &n_leaf, sizeof(size_t));
+      fi->read((char*) &n_branch, sizeof(size_t));
+
+      leaf_arr.resize(n_leaf);
+      branch_arr.resize(n_branch);
+
+      for (LeafNode &leaf : leaf_arr) {
+	leaf.read(fi);
+      }
+      for (BranchNode &branch : branch_arr) {
+	branch.read(fi);
+      }
+      this->root = internal::post_process_node_arr(leaf_arr, branch_arr);
+      assert(root && !leaf_arr.empty());
+    }
     
     Node *root = nullptr;
   private:
@@ -744,28 +756,7 @@ namespace d2 {
     real_t min_leaf_weight = .0;
     bool presorted = false;
     bool communicate = true;
-
     
-#ifdef RABIT_RABIT_H_
-    /*! \brief helper function that caches data to stream */
-    inline void save(dmlc::Stream* fo) {
-      for (const LeafNode &leaf : leaf_arr) {
-	leaf.write(fo);
-      }
-      for (const BranchNode &branch : branch_arr) {
-	branch.write(fo);
-      }
-    }
-    /*! \brief helper function that restores data from stream */
-    inline void load(dmlc::Stream* fi) {
-      for (LeafNode &leaf : leaf_arr) {
-	leaf.read(fi);
-      }
-      for (BranchNode &branch : branch_arr) {
-	branch.read(fi);
-      }
-    }
-#endif
     void prepare_presort(const real_t *XX, const label_t *yy, const real_t* ss,
 			 const size_t sample_size,
 			 internal::buf_tree_constructor<dim, YStats> &buf,

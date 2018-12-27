@@ -2,6 +2,7 @@
 
 #include <random>
 #include <fstream>
+#include <set>
 #include <sstream>
 using namespace d2;
 using namespace std;
@@ -78,17 +79,39 @@ real_t metric<reward_date_pair>(reward_date_pair *y_pred, reward_date_pair *y_tr
   return _sharpe_helper(k);
 }
 
+real_t metric_time(reward_date_pair *y_pred, reward_date_pair *y_true, size_t n, unsigned long long int *orderid) {
+  std::array<real_t, DAYS> k = {};
+  std::set<unsigned long long int> orderid_set;
+  int current_day = -1;
+  for (size_t i=0; i<n; ++i) {
+    if (y_true[i].date != current_day) {
+      current_day = y_true[i].date;
+      orderid_set.clear();
+    }
+    if (orderid_set.find(orderid[i]) != orderid_set.end()) continue;
+
+    if (y_pred[i].reward != 0) {
+      k[y_true[i].date] += y_true[i].reward;
+      orderid_set.insert(orderid[i]);
+    }
+  }
+
+  return _sharpe_helper(k);
+}
+
 
 int main(int argc, char* argv[]) {
   assert(N >= M);
   real_t *X, *w=NULL;
   d2_label_t *y, *y_pred;
+  unsigned long long int *orderid;
 
   // prepare naive training data
   X = new real_t[D*N];
   y = new d2_label_t[N];
   //w = new real_t[N];
   y_pred = new d2_label_t[N];
+  orderid = new unsigned long long int[N];
 
   if (argc == 1) {
     sample_naive_data(X, y, w, N);
@@ -100,10 +123,16 @@ int main(int argc, char* argv[]) {
       getline(train_fs, line);
       istringstream ss(line);
       string number;
+
+      getline(ss, number, ',');
+      orderid[i] = stoll(number);
+
       getline(ss, number, ',');
       y[i].reward = (real_t) stof(number);
+
       getline(ss, number, ',');
       y[i].date = (size_t) stoi(number);
+
       for (auto j=0; j<D; ++j) {
 	getline(ss, number, ',');
 	X[i*D+j] = stof(number);
@@ -119,15 +148,16 @@ int main(int argc, char* argv[]) {
   classifier->init();
   classifier->set_max_depth(MD);
   classifier->set_min_leaf_weight(MW);
-  // training
-  double start=getRealTime();
-  classifier->fit(X, y, w, N);
-  printf("training time: %lf seconds\n", getRealTime() - start);
-  printf("nleafs: %zu \n", classifier->root->get_leaf_count());
 
+  std::fstream f;
+  f.open("tree.bin", std::fstream::in);
+  classifier->load(&f);
+  f.close();
+  
   std::ostringstream oss;
   classifier->dotgraph(oss);
   std::cout << oss.str() << std::endl;
+
 
   if (argc == 1) {
     sample_naive_data(X, y, w, M);
@@ -135,16 +165,15 @@ int main(int argc, char* argv[]) {
     // output result
     printf("test sharpe: %.3f\n", -metric(y_pred, y, M) );  
   } else {
+    classifier->predict(X, N, y_pred);
+    printf("test sharpe: %.3f\n", -metric_time(y_pred, y, N, orderid) );
   }
 
-  std::fstream f;
-  f.open("tree.bin", std::fstream::out);
-  classifier->save(&f);
-  f.close();
 
   delete [] X;
   delete [] y;
   delete [] y_pred;
+  delete [] orderid;
   
   return 0;
 }
