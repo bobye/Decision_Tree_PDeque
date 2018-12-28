@@ -75,7 +75,7 @@ real_t metric<reward_date_pair>(reward_date_pair *y_pred, reward_date_pair *y_tr
   for (size_t i=0; i<n; ++i)
     if (y_pred[i].reward != 0) k[y_true[i].date] += y_true[i].reward;
 
-  return _sharpe_helper(k);
+  return _sharpe_helper(k).sharpe;
 }
 
 

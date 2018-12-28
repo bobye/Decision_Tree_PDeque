@@ -76,10 +76,10 @@ real_t metric<reward_date_pair>(reward_date_pair *y_pred, reward_date_pair *y_tr
   for (size_t i=0; i<n; ++i)
     if (y_pred[i].reward != 0) k[y_true[i].date] += y_true[i].reward;
 
-  return _sharpe_helper(k);
+  return _sharpe_helper(k).sharpe;
 }
 
-real_t metric_time(reward_date_pair *y_pred, reward_date_pair *y_true, size_t n, unsigned long long int *orderid) {
+void metric_time(reward_date_pair *y_pred, reward_date_pair *y_true, size_t n, unsigned long long int *orderid) {
   std::array<real_t, DAYS> k = {};
   std::set<unsigned long long int> orderid_set;
   int current_day = -1;
@@ -96,7 +96,10 @@ real_t metric_time(reward_date_pair *y_pred, reward_date_pair *y_true, size_t n,
     }
   }
 
-  return _sharpe_helper(k);
+  auto stats = _sharpe_helper(k);
+  std::cout << "mean:   " << stats.mean << std::endl;
+  std::cout << "std:    " << stats.std  << std::endl;
+  std::cout << "sharpe: " << stats.sharpe << std::endl;
 }
 
 
@@ -166,7 +169,7 @@ int main(int argc, char* argv[]) {
     printf("test sharpe: %.3f\n", -metric(y_pred, y, M) );  
   } else {
     classifier->predict(X, N, y_pred);
-    printf("test sharpe: %.3f\n", -metric_time(y_pred, y, N, orderid) );
+    metric_time(y_pred, y, N, orderid);
   }
 
 
