@@ -17,17 +17,11 @@ namespace d2 {
     struct ClassificationStats : public Stats<_D2_CLTYPE> {
       // member variables
       std::array<real_t, n_class+1> histogram;
-      const size_t nc = n_class;
 
       ClassificationStats (): histogram({}) {
       }
       
       ClassificationStats (const ClassificationStats<n_class> & that): histogram (that.histogram) {
-      }
-
-      ClassificationStats<n_class> & operator=(const ClassificationStats<n_class> &that) {
-	histogram = that.histogram;
-	return *this;
       }
       
       using LabelType = Stats<unsigned short int>::LabelType;

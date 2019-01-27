@@ -49,16 +49,11 @@ namespace d2 {
     struct DaySharpeStats: Stats<reward_date_pair> {
       size_t count;
       std::array<real_t, days> forward_return;
+      real_t best;
 
-      DaySharpeStats(): count(0), forward_return({}) {}
+      DaySharpeStats(): count(0), forward_return({}), best(std::numeric_limits<real_t>::max()) {}
       
-      DaySharpeStats(const DaySharpeStats<days> &that): count(that.count), forward_return(that.forward_return) {}
-
-      DaySharpeStats<days> & operator=(const DaySharpeStats<days> &that) {
-	count = that.count;
-	forward_return = that.forward_return;
-	return *this;
-      }
+      DaySharpeStats(const DaySharpeStats<days> &that): count(that.count), forward_return(that.forward_return), best(that.best) {}
 
       using Stats<reward_date_pair>::LabelType;
       
@@ -87,10 +82,29 @@ namespace d2 {
       }
     };
 
+    template <size_t days, typename criterion>
+    struct finalize<DaySharpeStats<days>, criterion> {
+      static void op(DaySharpeStats<days> &y_stats) {
+	y_stats.best = std::min(y_stats.best, criterion::op(y_stats));
+      }
+    };
+
+    template <size_t days, typename criterion>
+    struct prepare<DaySharpeStats<days>, criterion> {
+      static DaySharpeStats<days> left_op (const DaySharpeStats<days> &y_stats) {
+	DaySharpeStats<days> left_stats;
+	left_stats.best = y_stats.best;
+	return left_stats;
+      }
+      static DaySharpeStats<days> right_op (const DaySharpeStats<days> &y_stats) {
+	return y_stats;
+      }
+    };
+
     struct sharpe {
       template <size_t days>
       static inline real_t op(const DaySharpeStats<days> &y_stats) {
-	return _sharpe_helper(y_stats.forward_return).sharpe;
+	return std::min(_sharpe_helper(y_stats.forward_return).sharpe, y_stats.best);
       }
     };
   }

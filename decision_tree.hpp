@@ -189,6 +189,7 @@ namespace d2 {
       size_t cache_offset; ///< offset to the cache array head, aka (ptr - cache_offset) should be constant
       int idx_cache_index;
       int depth;
+      YStats y_stats;
     };
 
     struct index_cache {
@@ -228,10 +229,10 @@ namespace d2 {
       
       real_t best_goodness = 0;
 
-      YStats y_stats_left;
-      YStats y_stats_right = y_stats;
+      YStats y_stats_left  = def::prepare<YStats, criterion>::left_op(y_stats);      
+      YStats y_stats_right = def::prepare<YStats, criterion>::right_op(y_stats);
       
-      const real_t no_split_score =criterion::op(y_stats);
+      const real_t no_split_score = criterion::op(y_stats);
 
       size_t i=0;
       typename YStats::LabelType label;
@@ -282,13 +283,16 @@ namespace d2 {
       // make sure there is at least one sample
       assert(assignment.size > 0);
 
-      // compute the class histogram on the sample
-      YStats y_stats;
+      // compute Y stats on the sample
+      YStats y_stats = def::prepare<YStats, criterion>::left_op(assignment.y_stats);
       size_t *index=assignment.ptr;
 #pragma omp for
       for (size_t ii = 0; ii < assignment.size; ++ii) {
 	y_stats.update_left(buf.y[index[ii]]);
       }
+      def::finalize<YStats, criterion>::op(y_stats);
+
+      // build node
       if (assignment.size == 1 || 
 	  assignment.depth == buf.max_depth || 
 	  //r < 2 / all_class_w || 
@@ -339,10 +343,13 @@ namespace d2 {
 	  aleft.ptr = assignment.ptr;
 	  aleft.size = left_count[ii];
 	  aleft.cache_offset = assignment.cache_offset;
+	  aleft.y_stats = y_stats;
+
 	  aright.sorted_samples.resize(dim);
 	  aright.ptr = assignment.ptr + left_count[ii];
 	  aright.size = assignment.size - left_count[ii];
 	  aright.cache_offset = assignment.cache_offset + left_count[ii];
+	  aright.y_stats = y_stats;
 
 	  if (presort) {
 #pragma omp parallel for
@@ -467,7 +474,7 @@ namespace d2 {
       while (!tree_stack.empty()) { 
 	std::cout << "fetch data from the top node of stack ... " << std::flush;
 	auto cur_tree = tree_stack.top(); 
-	auto cur_assignment = std::get<0>(cur_tree);
+	auto cur_assignment = std::get<0>(cur_tree);	
 	int cur_parent = std::get<1>(cur_tree);
 
 	node_assignment<YStats> assignment_left, assignment_right;
@@ -498,8 +505,8 @@ namespace d2 {
 	  } else {
 	    assignment_left.idx_cache_index = -1;
 	    assignment_right.idx_cache_index = -1;
-	  }
-	    
+	  }	    
+	  
 	  is_branch = true;
 	  tree_stack.push(std::make_tuple(assignment_left, branch_arr.size()));
 	  tree_stack.push(std::make_tuple(assignment_right,branch_arr.size()));	  

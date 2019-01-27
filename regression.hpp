@@ -21,13 +21,6 @@ namespace d2 {
 	count(that.count), sum(that.sum), sum_sq(that.sum_sq) {
       }
 
-      RegressionStats & operator=(const RegressionStats & that) {
-	count = that.count;
-	sum = that.sum;
-	sum_sq = that.sum_sq;
-	return *this;
-      }
-
       inline LabelType get_label() const override {
 	return (LabelType) sum / (LabelType) count;
       }

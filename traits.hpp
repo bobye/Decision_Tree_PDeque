@@ -19,6 +19,16 @@ namespace d2 {
       virtual inline bool stop() const = 0;
     };
 
+    template <class YStats, typename criterion>
+    struct finalize {
+      static void op(YStats &y_stats) {}
+    };
+
+    template <class YStats, typename criterion>
+    struct prepare {
+      static YStats left_op (const YStats &y_stats) { return YStats(); }
+      static YStats right_op(const YStats &y_stats) { return y_stats;  }
+    };
   }
 
   namespace internal {
