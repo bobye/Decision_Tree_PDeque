@@ -10,5 +10,5 @@ all: test/*.cpp
 	g++ $(CFLAGS) -std=c++11 -O3 -msse2 -funroll-loops -I include test/test_day_sharpe.cpp -o build/test_day_sharpe -D _D2_SINGLE -D N=1000000 -D D=28 -D MD=8 -D MW=100 -D M=50000 $(LIB)
 	g++ $(CFLAGS) -std=c++11 -O3 -msse2 -funroll-loops -I include test/eval_day_sharpe.cpp -o build/eval_day_sharpe -D _D2_SINGLE -D N=1000000 -D D=28 -D MD=8 -D MW=100 -D M=50000 $(LIB)
 	g++ $(CFLAGS) -std=c++11 -O3 -msse2 -funroll-loops -I include test/test_dt.cpp -o build/test_dt -D _D2_SINGLE -D N=1000000 -D D=28 -D MD=32 -D MW=100 -D M=50000 -D USE_D2_CLTYPE $(LIB)
-	g++ $(CFLAGS) -std=c++11 -O3 -msse2 -funroll-loops -I include tool/sharpe_finder.cpp -o build/sharpe_finder -D _D2_SINGLE -D DIMENSION=28 -D DAYS=100
+	g++ $(CFLAGS) -std=c++11 -O3 -msse2 -funroll-loops -I include tool/sharpe_finder.cpp -o build/sharpe_finder -D _D2_SINGLE -D DIMENSION=28 -D DAYS=100 -D DAYS_TEST=100
 

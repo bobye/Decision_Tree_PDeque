@@ -11,7 +11,7 @@ using namespace std;
 typedef reward_date_pair d2_label_t;
 
 void metric_time(reward_date_pair *y_pred, reward_date_pair *y_true, size_t n, unsigned long long int *orderid) {
-  std::array<real_t, DAYS> k = {};
+  std::array<real_t, DAYS_TEST> k = {};
   std::set<unsigned long long int> orderid_set;
   int current_day = -1;
   for (size_t i=0; i<n; ++i) {
