@@ -97,6 +97,13 @@ int main(int argc, char* argv[]) {
 
   vector< Decision_Tree<DIMENSION, DaySharpeStats<DAYS>, sharpe> > classifiers (filenames.size());
 
+
+  // read test data
+  vector<real_t> X_test;
+  vector<d2_label_t> y_test;
+  vector<unsigned long long int> orders_test;
+  int has_test = read_data(test_filename, X_test, y_test, orders_test, true);
+
   for (auto i=0; i < filenames.size(); ++i) {
     string filename = filenames[i];
     vector<real_t> X;
@@ -133,7 +140,7 @@ int main(int argc, char* argv[]) {
     auto &classifier = classifiers[i];
 
     classifier.init();
-    classifier.set_max_depth(8);
+    classifier.set_max_depth(MD);
     classifier.set_min_leaf_weight(100);
     // training
     double start=getRealTime();
@@ -153,22 +160,20 @@ int main(int argc, char* argv[]) {
     classifier.save(&f);
     f.close();
 
-    // read test data
-    if (read_data(test_filename, X, y, orders, true) == 0) {
-      vector<d2_label_t> y_test(y.size());
-      for (size_t nn = 0; nn < y.size(); ++nn) {
-	auto &y_pred = y_test[nn];
+    if (has_test) {
+      vector<d2_label_t> y_pred(y_test.size());
+      for (size_t nn = 0; nn < y_test.size(); ++nn) {
+	auto &yy = y_pred[nn];
 	for (int j=0; j<i+1; ++j) {
-	  d2_label_t y_pred;
-	  classifiers[j].predict(&X[DIMENSION*nn], 1, &y_pred);
-	  if (y_pred.reward == 0) {
+	  classifiers[j].predict(&X_test[DIMENSION*nn], 1, &yy);
+	  if (yy.reward == 0) {
 	    break;
 	  }
 	}
       }
 
       // output result
-      metric_time(y_test.data(), y.data(), y.size(), orders.data());
+      metric_time(y_pred.data(), y_test.data(), y_test.size(), orders_test.data());
     }
   }
 
