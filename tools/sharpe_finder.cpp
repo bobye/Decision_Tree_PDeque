@@ -1,6 +1,5 @@
 #include "core/decision_tree.hpp"
 #include "utility/CLI11.hpp"
-#include "utility/dotgraph.hpp"
 
 #include <random>
 #include <fstream>
@@ -151,7 +150,9 @@ int main(int argc, char* argv[]) {
     X_reduced.clear();
     y_reduced.clear();
 
-    std::cout << classifier << std::endl;
+    std::ostringstream oss;
+    classifier.dotgraph(oss);
+    std::cout << oss.str() << std::endl;
     
     std::fstream f;
     string tree_file = "tree.bin." + to_string(i);
