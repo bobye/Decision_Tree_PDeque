@@ -17,6 +17,7 @@
 #include <utility>
 #include <vector>
 #include <iomanip>
+#include <unordered_map>
 
 #ifdef RABIT_RABIT_H
 #include <dmlc/io.h>
@@ -61,6 +62,8 @@ namespace d2 {
       }
 
       virtual void dotgraph(std::ostream &f) const = 0;
+      virtual void dotgraph(std::ostream &f, 
+			    std::unordered_map<size_t, size_t> &node_mapper) const = 0;
 
       int parent;
     };    
@@ -96,6 +99,12 @@ namespace d2 {
       void dotgraph(std::ostream &f) const {
 	f << "node" << std::hex << hashCode() 
 	  << std::dec << " [label=\"" << label << "\", shape=box, style=filled ]\n";
+      }
+      void dotgraph(std::ostream &f,
+		    std::unordered_map<size_t, size_t> &node_mapper) const {
+	const size_t& note = node_mapper[hashCode()];
+	f << "node" << std::hex << hashCode() 
+	  << std::dec << " [label=\"" << label << "("<< note << ")\", shape=box, style=filled ]\n";
       }
       
       void write(std::ostream *fo) const {
@@ -149,6 +158,18 @@ namespace d2 {
 	f << "node" << hashCode() << " -> node" <<  left->hashCode() << " [label=\"yes\"]\n";
 	f << "node" << hashCode() << " -> node" << right->hashCode() << "[label=\"no\"]\n";
 	f << std::dec;
+      }
+
+      void dotgraph(std::ostream &f, std::unordered_map<size_t, size_t> &node_mapper) const {
+	assert(left && right);
+	left->dotgraph(f, node_mapper);
+	right->dotgraph(f, node_mapper);
+	f << std::hex;
+	f << "node" << hashCode() << std::dec << " [label=\"x" << index << " < " << cutoff << "?\", style=filled]\n";
+	f << std::hex;
+	f << "node" << hashCode() << " -> node" <<  left->hashCode() << " [label=\"yes\"]\n";
+	f << "node" << hashCode() << " -> node" << right->hashCode() << "[label=\"no\"]\n";
+	f << std::dec;	
       }
 
 
@@ -605,11 +626,15 @@ namespace d2 {
       leaf_arr.clear();
       branch_arr.clear();
     }
-    void predict(const real_t *X, const size_t n, label_t *y) const {
+    void predict(const real_t *X, const size_t n, label_t *y,
+		 std::unordered_map<size_t, size_t> *node_mapper = nullptr) const {
       const real_t* x = X;
       assert(root);
       for (size_t i=0; i<n; ++i, x+=dim) {
 	auto leaf = root->get_leafnode(x);
+	if (node_mapper) {
+	  (*node_mapper)[leaf->hashCode()]++;
+	}
 	y[i] = leaf->label;
       }
     };
@@ -619,6 +644,13 @@ namespace d2 {
       f << "digraph G {\n";
       root->dotgraph(f);
       f << "}\n";
+    }
+
+    void dotgraph(std::ostream &f, std::unordered_map<size_t, size_t> &node_mapper) const {
+      assert(root);
+      f << "digraph G {\n";
+      root->dotgraph(f, node_mapper);
+      f << "}\n";      
     }
     
     int fit(const real_t *X, const label_t *y, 

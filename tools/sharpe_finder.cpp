@@ -103,6 +103,8 @@ int main(int argc, char* argv[]) {
   vector<d2_label_t> y_test;
   vector<unsigned long long int> orders_test;
   bool has_test = read_data(test_filename, X_test, y_test, orders_test, true) == 0;
+  std::unordered_map<size_t, size_t> node_mapper;
+
 
   for (auto i=0; i < filenames.size(); ++i) {
     string filename = filenames[i];
@@ -149,10 +151,6 @@ int main(int argc, char* argv[]) {
     printf("nleafs: %zu \n", classifier.root->get_leaf_count());
     X_reduced.clear();
     y_reduced.clear();
-
-    std::ostringstream oss;
-    classifier.dotgraph(oss);
-    std::cout << oss.str() << std::endl;
     
     std::fstream f;
     string tree_file = "tree.bin." + to_string(i);
@@ -165,7 +163,12 @@ int main(int argc, char* argv[]) {
       for (size_t nn = 0; nn < y_test.size(); ++nn) {
 	auto &yy = y_pred[nn];
 	for (int j=0; j<i+1; ++j) {
-	  classifiers[j].predict(&X_test[DIMENSION*nn], 1, &yy);
+
+	  if (i+1 == filenames.size())
+	    classifiers[j].predict(&X_test[DIMENSION*nn], 1, &yy, &node_mapper);
+	  else
+	    classifiers[j].predict(&X_test[DIMENSION*nn], 1, &yy);
+
 	  if (yy.reward == 0) {
 	    break;
 	  }
@@ -176,7 +179,13 @@ int main(int argc, char* argv[]) {
       metric_time(y_pred.data(), y_test.data(), y_test.size(), orders_test.data());
     }
   }
-
+  
+  
+  for (int i=0; i<filenames.size(); ++i) {
+    std::ostringstream oss;
+    classifiers[i].dotgraph(oss, node_mapper);
+    std::cout << oss.str() << std::endl;
+  }
 
 
   
