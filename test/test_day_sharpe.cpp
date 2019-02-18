@@ -92,6 +92,16 @@ int main(int argc, char* argv[]) {
 
   if (argc == 1) {
     sample_naive_data(X, y, w, N);
+    ofstream train_fs;
+    train_fs.open("data.csv");
+    for (auto i=0; i<N; ++i) {
+      train_fs << y[i].reward;
+      train_fs << "," << y[i].date;
+      for (auto j=0; j<D; ++j)
+	train_fs << "," << X[i*D +j];
+      train_fs << endl;
+    }
+    train_fs.close();
   } else {
     ifstream train_fs;
     train_fs.open(argv[1]);
