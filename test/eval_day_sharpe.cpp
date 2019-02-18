@@ -1,4 +1,5 @@
 #include "core/decision_tree.hpp"
+#include "utility/dotgraph.hpp"
 
 #include <random>
 #include <fstream>
@@ -157,9 +158,7 @@ int main(int argc, char* argv[]) {
   classifier->load(&f);
   f.close();
   
-  std::ostringstream oss;
-  classifier->dotgraph(oss);
-  std::cout << oss.str() << std::endl;
+  std::cout << *classifier << std::endl;
 
 
   if (argc == 1) {

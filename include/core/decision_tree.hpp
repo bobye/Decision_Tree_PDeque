@@ -59,8 +59,6 @@ namespace d2 {
 	return ss.str();
       }
 
-      virtual void dotgraph(std::ostream &f) const = 0;
-
       int parent;
     };    
 
@@ -91,11 +89,7 @@ namespace d2 {
 	return this;
       }
       size_t get_leaf_count() {return 1.;}
-      
-      void dotgraph(std::ostream &f) const {
-	f << "node" << hashCode() << " [label=\"" << label << "\", shape=box, style=filled ]\n";
-      }
-      
+            
       void write(std::ostream *fo) const {
 	
 	fo->write((const char *) &this->label, sizeof(typename YStats::LabelType));
@@ -136,16 +130,6 @@ namespace d2 {
 	n_leafs = left->get_leaf_count() + right->get_leaf_count();
 	return n_leafs;
       }
-
-      void dotgraph(std::ostream &f) const {
-	assert(left && right);
-	left->dotgraph(f);
-	right->dotgraph(f);
-
-	f << "node" << hashCode() << " [label=\"x" << index << " < " << cutoff << "?\", style=filled]\n";
-	f << "node" << hashCode() << " -> node" <<  left->hashCode() << " [label=\"yes\"]\n node" <<  hashCode() << " -> node" << right->hashCode() << "[label=\"no\"]\n";
-      }
-
 
       void write(std::ostream *fo) const {
 	fo->write((const char *) &this->nleft, sizeof(int));
@@ -608,13 +592,6 @@ namespace d2 {
 	y[i] = leaf->label;
       }
     };
-
-    void dotgraph(std::ostream &f) {
-      assert(root);
-      f << "digraph G {\n";
-      root->dotgraph(f);
-      f << "}\n";
-    }
     
     int fit(const real_t *X, const label_t *y, 
 	    const real_t *sample_weight, const size_t n,

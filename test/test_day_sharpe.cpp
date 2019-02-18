@@ -1,4 +1,5 @@
 #include "core/decision_tree.hpp"
+#include "utility/dotgraph.hpp"
 
 #include <random>
 #include <fstream>
@@ -135,9 +136,7 @@ int main(int argc, char* argv[]) {
   printf("training time: %lf seconds\n", getRealTime() - start);
   printf("nleafs: %zu \n", classifier->root->get_leaf_count());
 
-  std::ostringstream oss;
-  classifier->dotgraph(oss);
-  std::cout << oss.str() << std::endl;
+  std::cout << *classifier << std::endl;
 
   if (argc == 1) {
     sample_naive_data(X, y, w, M);
