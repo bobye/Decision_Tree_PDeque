@@ -2,7 +2,7 @@
 #define _DAY_SHARPE_H_
 
 
-#include "traits.hpp"
+#include "core/traits.hpp"
 
 #include <algorithm>
 #include <cmath>

@@ -2,7 +2,7 @@
 #define _D2_DECISION_TREE_H_
 
 #include "common.hpp"
-#include "timer.h"
+#include "utility/timer.h"
 #include "traits.hpp"
 
 // stl headers
@@ -817,8 +817,8 @@ namespace d2 {
   };    
 }
 
-#include "classification.hpp"
-#include "regression.hpp"
-#include "day_sharpe.hpp"
+#include "impl/classification.hpp"
+#include "impl/regression.hpp"
+#include "impl/day_sharpe.hpp"
 
 #endif /* _D2_DECISION_TREE_H_ */

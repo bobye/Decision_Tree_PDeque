@@ -16,7 +16,7 @@ This is the proof-of-concept demo code for reproducing experiments in the arXiv 
 
 ```
 $ make
-$ OMP_NUM_THREADS=28 ./test_dt higgs-train-1m.csv higgs-test.csv
+$ OMP_NUM_THREADS=28 ./build/test_dt higgs-train-1m.csv higgs-test.csv
 tree induction time: 1.217055 seconds
 training time: 2.237200 seconds
 nleafs: 2216 
@@ -25,7 +25,7 @@ test accuracy: 0.710
 
 ### Other tests on synthetic data
 ```
-$ OMP_NUM_THREADS=8 ./test_dt
+$ OMP_NUM_THREADS=8 ./build/test_dt
 tree induction time: 2.715179 seconds
 training time: 4.514815 seconds
 nleafs: 33

@@ -1,7 +1,7 @@
 #ifndef _REGRESSION_H_
 #define _REGRESSION_H_
 
-#include "traits.hpp"
+#include "core/traits.hpp"
 
 #define _D2_RGTYPE real_t
 

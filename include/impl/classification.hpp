@@ -1,7 +1,7 @@
 #ifndef _CLASSIFICATION_H_
 #define _CLASSIFICATION_H_
 
-#include "traits.hpp"
+#include "core/traits.hpp"
 
 #include <array>
 #include <cassert>
