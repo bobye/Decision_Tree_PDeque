@@ -29,7 +29,9 @@ namespace d2 {
       m1 = m1 / days;
       m2 = m2 / days;
       
-      return  {m1, m2, static_cast<real_t>(- m1 / (sqrt(m2 - m1*m1) + 1E-10))};
+      return  {m1, 
+	  static_cast<real_t>(sqrt(m2 - m1 * m1)), 
+	  static_cast<real_t>(- m1 / (sqrt(m2 - m1*m1) + 1E-10))};
     }
     
     struct reward_date_pair {

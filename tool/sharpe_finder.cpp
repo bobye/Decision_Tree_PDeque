@@ -156,7 +156,17 @@ int main(int argc, char* argv[]) {
     // read test data
     if (read_data(test_filename, X, y, orders, true) == 0) {
       vector<d2_label_t> y_test(y.size());
-      classifier.predict(X.data(), y.size(), y_test.data());
+      for (size_t nn = 0; nn < y.size(); ++nn) {
+	auto &y_pred = y_test[nn];
+	for (int j=0; j<i+1; ++j) {
+	  d2_label_t y_pred;
+	  classifiers[j].predict(&X[DIMENSION*nn], 1, &y_pred);
+	  if (y_pred.reward == 0) {
+	    break;
+	  }
+	}
+      }
+
       // output result
       metric_time(y_test.data(), y.data(), y.size(), orders.data());
     }
