@@ -16,6 +16,7 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+#include <iomanip>
 
 #ifdef RABIT_RABIT_H
 #include <dmlc/io.h>
@@ -53,10 +54,10 @@ namespace d2 {
       /*! \brief read data from a stream buffer */
       virtual void read(std::istream *fi) = 0;
 
-      std::string hashCode() const {
+      size_t hashCode() const {
 	std::stringstream ss;
 	ss << (void const *) this;
-	return ss.str();
+	return std::hash<std::string>()(ss.str());
       }
 
       virtual void dotgraph(std::ostream &f) const = 0;
@@ -93,7 +94,8 @@ namespace d2 {
       size_t get_leaf_count() {return 1.;}
       
       void dotgraph(std::ostream &f) const {
-	f << "node" << hashCode() << " [label=\"" << label << "\", shape=box, style=filled ]\n";
+	f << "node" << std::hex << hashCode() 
+	  << std::dec << " [label=\"" << label << "\", shape=box, style=filled ]\n";
       }
       
       void write(std::ostream *fo) const {
@@ -141,9 +143,12 @@ namespace d2 {
 	assert(left && right);
 	left->dotgraph(f);
 	right->dotgraph(f);
-
-	f << "node" << hashCode() << " [label=\"x" << index << " < " << cutoff << "?\", style=filled]\n";
-	f << "node" << hashCode() << " -> node" <<  left->hashCode() << " [label=\"yes\"]\n node" <<  hashCode() << " -> node" << right->hashCode() << "[label=\"no\"]\n";
+	f << std::hex;
+	f << "node" << hashCode() << std::dec << " [label=\"x" << index << " < " << cutoff << "?\", style=filled]\n";
+	f << std::hex;
+	f << "node" << hashCode() << " -> node" <<  left->hashCode() << " [label=\"yes\"]\n";
+	f << "node" << hashCode() << " -> node" << right->hashCode() << "[label=\"no\"]\n";
+	f << std::dec;
       }
 
 
