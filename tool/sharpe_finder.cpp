@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) {
   vector<real_t> X_test;
   vector<d2_label_t> y_test;
   vector<unsigned long long int> orders_test;
-  int has_test = read_data(test_filename, X_test, y_test, orders_test, true);
+  bool has_test = read_data(test_filename, X_test, y_test, orders_test, true) == 0;
 
   for (auto i=0; i < filenames.size(); ++i) {
     string filename = filenames[i];

@@ -106,7 +106,8 @@ namespace d2 {
     struct sharpe {
       template <size_t days>
       static inline real_t op(const DaySharpeStats<days> &y_stats) {
-	return std::min(_sharpe_helper(y_stats.forward_return).sharpe, y_stats.best);
+	return _sharpe_helper(y_stats.forward_return).sharpe;
+	//return std::min(_sharpe_helper(y_stats.forward_return).sharpe, y_stats.best);
       }
     };
   }
