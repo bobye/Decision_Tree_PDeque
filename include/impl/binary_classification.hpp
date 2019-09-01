@@ -59,7 +59,7 @@ namespace d2 {
     struct fntn {
       static inline real_t op(const BinaryClassificationStats &y_stats) {
 	const auto &alpha = y_stats.alpha;
-	return std::min(alpha * y_stats.histogram[0] - (1-alpha) * y_stats.histogram[1], (real_t) 0.);
+	return std::min(alpha * y_stats.histogram[1] - (1-alpha) * y_stats.histogram[0], (real_t) 0.);
       }
     };
   }
