@@ -1,14 +1,12 @@
 #ifndef _CLASSIFICATION_H_
 #define _CLASSIFICATION_H_
 
+#include "core/common.hpp"
 #include "core/traits.hpp"
 
 #include <array>
 #include <cassert>
 #include <cmath>
-
-
-#define _D2_CLTYPE unsigned short int
 
 namespace d2 {
   namespace def {
@@ -24,7 +22,7 @@ namespace d2 {
       ClassificationStats (const ClassificationStats<n_class> & that): histogram (that.histogram) {
       }
       
-      using LabelType = Stats<unsigned short int>::LabelType;
+      using LabelType = Stats<_D2_CLTYPE>::LabelType;
       
       inline LabelType get_label() const override {
 	return std::max_element(histogram.begin(), histogram.end()-1) - histogram.begin();
@@ -104,7 +102,7 @@ namespace d2 {
     template <size_t n_class>
     struct sorted_sample<def::ClassificationStats<n_class> > {
       real_t x;
-      unsigned short int y;
+      _D2_CLTYPE y;
       //      real_t weight;
       size_t index;
       //sorted_sample *next;

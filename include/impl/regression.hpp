@@ -1,9 +1,8 @@
 #ifndef _REGRESSION_H_
 #define _REGRESSION_H_
 
+#include "core/common.hpp"
 #include "core/traits.hpp"
-
-#define _D2_RGTYPE real_t
 
 namespace d2 {
   //! \brief customizable template classes that extend the scope of decision tree implementations

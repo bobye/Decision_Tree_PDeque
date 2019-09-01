@@ -30,8 +30,8 @@ inline double getRealTime() {
 //clock_gettime is not implemented on OSX
 #include <mach/clock.h>
 #include <mach/mach.h>
-#define CLOCK_REALTIME 0
-#define CLOCK_MONOTONIC 0
+//#define CLOCK_REALTIME 0
+//#define CLOCK_MONOTONIC 0
 inline int clock_gettime(int clk_id, struct timespec* ts) {
   clock_serv_t cclock;
   mach_timespec_t mts;

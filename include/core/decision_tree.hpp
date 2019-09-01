@@ -857,5 +857,6 @@ namespace d2 {
 #include "impl/classification.hpp"
 #include "impl/regression.hpp"
 #include "impl/day_sharpe.hpp"
+#include "impl/binary_classification.hpp"
 
 #endif /* _D2_DECISION_TREE_H_ */

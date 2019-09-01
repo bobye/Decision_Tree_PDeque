@@ -57,4 +57,8 @@ namespace rabit {
 }
 #endif
 
+
+#define _D2_CLTYPE unsigned short int  /* label type for classification */
+#define _D2_RGTYPE real_t /* label type for regression */
+
 #endif /* _COMMON_H_ */

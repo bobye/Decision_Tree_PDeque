@@ -44,57 +44,33 @@ typedef _D2_RGTYPE d2_label_t;
 #endif
 
 template <typename LabelType>
-void sample_naive_data(real_t *X, LabelType *y, real_t *w, size_t n);
-
-
-template <>
-void sample_naive_data<_D2_CLTYPE>(real_t *X, _D2_CLTYPE *y, real_t *w, size_t n) {
+void sample_naive_data(real_t *X, LabelType *y, real_t *w, size_t n) {
   for (size_t i=0; i<n; ++i) {
-    y[i] = rand() % 2;
+    y[i] = ((real_t) rand() / (real_t) RAND_MAX) < 0.02;
     if (y[i]) {
       for (size_t j=0; j<D; ++j)
 	X[i*D+j]=(real_t) rand() / (real_t) RAND_MAX;
     } else {
       for (size_t j=0; j<D; ++j)
-	X[i*D+j]=(real_t) rand() / (real_t) RAND_MAX - .1;
-    }
-    if (w) w[i] = 1.; // (real_t) rand() / (real_t) RAND_MAX;
-  }  
-}
-
-template <>
-void sample_naive_data<_D2_RGTYPE>(real_t *X, _D2_RGTYPE *y, real_t *w, size_t n) {
-  for (size_t i=0; i<n; ++i) {
-    y[i] = rand() % 2;
-    if (y[i]) {
-      for (size_t j=0; j<D; ++j)
-	X[i*D+j]=(real_t) rand() / (real_t) RAND_MAX;
-    } else {
-      for (size_t j=0; j<D; ++j)
-	X[i*D+j]=(real_t) rand() / (real_t) RAND_MAX - .1;
+	X[i*D+j]=(real_t) rand() / (real_t) RAND_MAX - 0.01;
     }
     if (w) w[i] = 1.; // (real_t) rand() / (real_t) RAND_MAX;
   }  
 }
 
 template <typename LabelType>
-real_t metric(LabelType *y_pred, LabelType *y_true, size_t n);
-
-
-template <>
-real_t metric<_D2_CLTYPE>(_D2_CLTYPE *y_pred, _D2_CLTYPE *y_true, size_t n) {
-  size_t k=0;
-  for (size_t i=0; i<n; ++i)
-    if (y_pred[i] == y_true[i]) ++k;
-  return (real_t) k / (real_t) n;
-}
-
-template <>
-real_t metric<_D2_RGTYPE>(_D2_RGTYPE *y_pred, _D2_RGTYPE *y_true, size_t n) {
-  size_t k=0;
-  for (size_t i=0; i<n; ++i)
-    if ((_D2_RGTYPE) (y_pred[i] > 0.5) == y_true[i]) ++k;
-  return (real_t) k / (real_t) n;
+std::pair<real_t, real_t> metric(LabelType *y_pred, LabelType *y_true, size_t n) {
+  size_t fn=0, fp=0, tn=0, tp=0;
+  for (size_t i=0; i<n; ++i) {
+    if (y_true[i] == 0) {
+      if (y_pred[i] < 0.5) tn ++;
+      else fn ++;
+    } else {
+      if (y_pred[i] > 0.5) tp ++;
+      else fp ++;
+    }
+  }
+  return std::make_pair((real_t) fp/ (real_t) (fp + tp), (real_t) fn/ (real_t) (fn + tn));
 }
 
 int main(int argc, char* argv[]) {
@@ -132,6 +108,7 @@ int main(int argc, char* argv[]) {
   // create classifier
 #if USE_D2_CLTYPE
   auto classifier = new Decision_Tree<D, def::ClassificationStats<NC>, def::gini>();
+  //auto classifier = new Decision_Tree<D, def::BinaryClassificationStats, def::fntn>();
 #elif USE_D2_RGTYPE
   auto classifier = new Decision_Tree<D, def::RegressionStats, def::mse>();
 #endif
@@ -151,7 +128,8 @@ int main(int argc, char* argv[]) {
     classifier->predict(X, M, y_pred);
 
     // output result
-    printf("test metric: %.3f\n", metric(y_pred, y, M) );  
+    auto result = metric(y_pred, y, M);
+    printf("test metric: FP %.3f, FN %.3f\n", std::get<0>(result), std::get<1>(result));
   } else if (argc == 3) {
     assert(M < N);
     ifstream test_fs;
@@ -170,7 +148,8 @@ int main(int argc, char* argv[]) {
     }
     test_fs.close();
     classifier->predict(X, M, y_pred);
-    printf("test metric: %.3f\n", metric(y_pred, y, M) );      
+    auto result = metric(y_pred, y, M);
+    printf("test metric: FP %.3f, FN %.3f\n", std::get<0>(result), std::get<1>(result));
   }
 
   delete [] X;
