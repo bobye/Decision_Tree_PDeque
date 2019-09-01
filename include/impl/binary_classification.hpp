@@ -28,7 +28,7 @@ namespace d2 {
       using LabelType = Stats<_D2_CLTYPE>::LabelType;
 
       inline LabelType get_label() const override {
-	if (alpha * histogram[0] - (1-alpha) * histogram[1] >= 0) {
+	if (alpha * histogram[1] - (1-alpha) * histogram[0] <= 0) {
 	  return 0;
 	} else {
 	  return 1;
