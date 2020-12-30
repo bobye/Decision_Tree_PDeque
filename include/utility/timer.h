@@ -11,11 +11,11 @@ inline double getRealTime() {
   FILETIME tm;
   ULONGLONG t;
 #if defined(NTDDI_WIN8) && NTDDI_VERSION >= NTDDI_WIN8
-	/* Windows 8, Windows Server 2012 and later. ---------------- */
-	GetSystemTimePreciseAsFileTime( &tm );
+    /* Windows 8, Windows Server 2012 and later. ---------------- */
+    GetSystemTimePreciseAsFileTime( &tm );
 #else
-	/* Windows 2000 and later. ---------------------------------- */
-	GetSystemTimeAsFileTime( &tm );
+    /* Windows 2000 and later. ---------------------------------- */
+    GetSystemTimeAsFileTime( &tm );
 #endif  
   t = ((ULONGLONG)tm.dwHighDateTime << 32) | (ULONGLONG)tm.dwLowDateTime;
   return (double) t / (double) BILLION;
@@ -23,6 +23,7 @@ inline double getRealTime() {
 
 
 #else
+
 #include <time.h>
 
 #ifdef __MACH__
@@ -47,9 +48,9 @@ inline int clock_gettime(int clk_id, struct timespec* ts) {
 
 
 inline double getRealTime() {
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);     
-  return (double) ( ts.tv_sec ) + (double) ( ts.tv_nsec ) / (double) BILLION ;
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double) (ts.tv_sec) + (double) (ts.tv_nsec) / (double) BILLION;
 }
 
 #endif
