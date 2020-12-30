@@ -7,7 +7,7 @@
 
 // stl headers
 #include <algorithm>
-#include <assert.h>
+#include <cassert>
 #include <cmath>
 #include <iostream>
 #include <numeric>
@@ -26,7 +26,7 @@
 namespace d2 {
     namespace internal {
 
-        struct _DT {
+        struct DT {
             constexpr static real_t prior_weight = 0.00;
         };
 
@@ -34,22 +34,20 @@ namespace d2 {
          * which includes shared functions and data members of both leaf and branch
         */
         template<size_t dim, class YStats>
-        class _DTNode {
+        class DTNode {
         public:
             YStats y_stats;
 
-            typedef _DTLeaf<dim, YStats> Leaf;
-            typedef _DTBranch<dim, YStats> Branch;
+            typedef DTLeaf<dim, YStats> Leaf;
+            typedef DTBranch<dim, YStats> Branch;
 
-            _DTNode() {}
-
-            _DTNode(const YStats &ys) : y_stats(ys) {
-            }
+            DTNode() = default;
+            explicit DTNode(const YStats &ys) : y_stats(ys) {}
 
             /*! \brief get pointer to the leaf node by a given sample */
-            virtual Leaf *get_leafnode(const real_t *X) = 0;
+            virtual Leaf *getLeafNode(const real_t *X) = 0;
 
-            virtual size_t get_leaf_count() = 0;
+            virtual size_t getLeafCount() = 0;
 
             /*! \brief write data into a stream buffer */
             virtual void write(std::ostream *fo) const = 0;
@@ -68,26 +66,23 @@ namespace d2 {
             virtual void dotgraph(std::ostream &f,
                                   std::unordered_map<size_t, size_t> &node_mapper) const = 0;
 
-            int parent;
+            int parent{};
         };
 
         /*! \brief lead node in decision tree
          */
         template<size_t dim, class YStats>
-        class _DTLeaf : public _DTNode<dim, YStats> {
+        class DTLeaf : public DTNode<dim, YStats> {
         public:
-            using typename _DTNode<dim, YStats>::Leaf;
-            using typename _DTNode<dim, YStats>::Branch;
-            using _DTNode<dim, YStats>::hashCode;
+            using typename DTNode<dim, YStats>::Leaf;
+            using typename DTNode<dim, YStats>::Branch;
+            using DTNode<dim, YStats>::hashCode;
 
-            _DTLeaf() {}
-
-            _DTLeaf(const YStats &ys) : _DTNode<dim, YStats>(ys) {
-                label = ys.getLabel();
-            }
+            DTLeaf() = default;
+            explicit DTLeaf(const YStats &ys) : DTNode<dim, YStats>(ys), label(ys.getLabel()) {}
 
             /*! \brief construct a new leaf node from a branch node */
-            _DTLeaf(const Branch &that) {
+            explicit DTLeaf(const Branch &that) {
                 this->y_stats = that.y_stats;
                 //this->score = that.score;
                 //this->weight = that.weight;
@@ -96,11 +91,11 @@ namespace d2 {
                 this->label = that.y_stats.getLabel();
             }
 
-            Leaf *get_leafnode(const real_t *X) {
+            Leaf *getLeafNode(const real_t *X) {
                 return this;
             }
 
-            size_t get_leaf_count() { return 1.; }
+            size_t getLeafCount() { return 1.; }
 
             void dotgraph(std::ostream &f) const {
                 f << "node" << std::hex << hashCode()
@@ -131,29 +126,27 @@ namespace d2 {
         /*! \brief branch node in decision tree
          */
         template<size_t dim, class YStats>
-        class _DTBranch : public _DTNode<dim, YStats> {
+        class DTBranch : public DTNode<dim, YStats> {
         public:
-            using typename _DTNode<dim, YStats>::Leaf;
-            using typename _DTNode<dim, YStats>::Branch;
-            using _DTNode<dim, YStats>::hashCode;
+            using typename DTNode<dim, YStats>::Leaf;
+            using typename DTNode<dim, YStats>::Branch;
+            using DTNode<dim, YStats>::hashCode;
 
 
-            _DTBranch() {};
+            DTBranch() = default;
+            DTBranch(size_t i, real_t cto) : index(i), cutoff(cto) {}
 
-            _DTBranch(size_t i, real_t cto) : index(i), cutoff(cto) {
-            }
-
-            Leaf *get_leafnode(const real_t *X) {
+            Leaf *getLeafNode(const real_t *X) {
                 assert(left && right);
                 if (X[index] < cutoff) {
-                    return left->get_leafnode(X);
+                    return left->getLeafNode(X);
                 } else {
-                    return right->get_leafnode(X);
+                    return right->getLeafNode(X);
                 }
             }
 
-            size_t get_leaf_count() {
-                n_leafs = left->get_leaf_count() + right->get_leaf_count();
+            size_t getLeafCount() {
+                n_leafs = left->getLeafCount() + right->getLeafCount();
                 return n_leafs;
             }
 
@@ -202,11 +195,11 @@ namespace d2 {
                 fi->read((char *) &this->n_leafs, sizeof(size_t));
             }
 
-            _DTNode<dim, YStats> *left = nullptr, *right = nullptr;
+            DTNode<dim, YStats> *left = nullptr, *right = nullptr;
             int nleft = -1, nright = -1;
-            size_t index;
-            real_t cutoff;
-            size_t n_leafs;
+            size_t index{};
+            real_t cutoff{};
+            size_t n_leafs{};
         };
 
 
@@ -216,8 +209,7 @@ namespace d2 {
         template<class YStats>
         struct SortedSampleDeque : public std::deque<SortedSample<YStats> > {
             SortedSampleDeque() : std::deque<SortedSample<YStats> >() {}
-
-            SortedSampleDeque(const size_t n) : std::deque<SortedSample<YStats> >(n) {}
+            explicit SortedSampleDeque(const size_t n) : std::deque<SortedSample<YStats> >(n) {}
         };
 
         template<class YStats>
@@ -229,6 +221,13 @@ namespace d2 {
             int idx_cache_index;
             int depth;
             YStats y_stats;
+            void Initialize(size_t dim, size_t *ptr_, size_t size_, size_t cache_offset_, const YStats& y_stats_) {
+                sorted_samples.resize(dim);
+                ptr = ptr_;
+                size = size_;
+                cache_offset = cache_offset_;
+                y_stats = y_stats_;
+            }
         };
 
         struct IndexCache {
@@ -241,23 +240,19 @@ namespace d2 {
          */
         template<size_t dim, class YStats>
         struct BufferForTreeConstructor {
-            //std::vector<std::vector<real_t> > X; ///< store data in coordinate-order
             std::vector<typename YStats::LabelType> y;
             std::vector<real_t> sample_weight;
-            size_t max_depth;
-            real_t min_leaf_weight;
+            size_t max_depth{};
+            real_t min_leaf_weight{};
             bool warm_start = false;
-            //std::vector<sample> sample_cache;
             std::stack<std::tuple<NodeAssignment<YStats>, int> > tree_stack;
 
             // decision tree with presort
-            //std::vector<std::vector<SortedSample> > sorted_samples;
-            std::vector<std::vector<size_t> > inv_ind_sorted;
             std::vector<char> sample_mask_cache;
         };
 
 
-        template<size_t dim, class YStats, typename criterion>
+        template<class YStats, typename criterion>
         real_t best_split_ptr(SortedSampleDeque<YStats> &sample_deque,
                               size_t n,
                               real_t &cutoff,
@@ -288,7 +283,6 @@ namespace d2 {
                     }
                 };
                 if (i < n) {
-                    label = yy;
                     const real_t goodness =
                             no_split_score - YStats::template goodness_score<criterion>(y_stats_left, y_stats_right);
                     if (goodness > best_goodness) {
@@ -305,14 +299,14 @@ namespace d2 {
         template<class YStats>
         void inplace_split_ptr(SortedSampleDeque<YStats> &sample_deque,
                                NodeAssignment<YStats> &assignment) {
-#pragma omp parallel for
+#pragma omp parallel for default(none) shared(assignment, sample_deque)
             for (size_t i = 0; i < assignment.size; ++i) {
                 assignment.ptr[i] = sample_deque[i].index;
             }
         }
 
         template<size_t dim, class YStats, typename criterion>
-        _DTNode<dim, YStats> *build_dtnode(NodeAssignment<YStats> &assignment,
+        DTNode<dim, YStats> *build_dtnode(NodeAssignment<YStats> &assignment,
                                            NodeAssignment<YStats> &aleft,
                                            NodeAssignment<YStats> &aright,
                                            BufferForTreeConstructor<dim, YStats> &buf,
@@ -342,7 +336,7 @@ namespace d2 {
                 y_stats.stop()
                     ) {
                 // if the condtion to create a leaf node is satisfied
-                _DTLeaf<dim, YStats> *leaf = new _DTLeaf<dim, YStats>(y_stats);
+                auto *leaf = new DTLeaf<dim, YStats>(y_stats);
                 return leaf;
             } else {
                 // if it is possible to create a branch node
@@ -352,11 +346,11 @@ namespace d2 {
 
                 // compute goodness split score across different dimensions
                 //	if (dim_index >= 0) printf("cached index: %d\n", dim_index);
-#pragma omp parallel for
+#pragma omp parallel for default(none) shared(assignment, goodness, cutoff, left_count, y_stats)
                 for (size_t ii = 0; ii < dim; ++ii) {
                     if (dim_index < 0 || ii == dim_index) {
                         auto &sorted_samples = assignment.sorted_samples[ii];
-                        goodness[ii] = best_split_ptr<dim, YStats, criterion>
+                        goodness[ii] = best_split_ptr<YStats, criterion>
                                 (*sorted_samples, assignment.size,
                                  cutoff[ii], left_count[ii], presort, y_stats);
                     }
@@ -370,27 +364,26 @@ namespace d2 {
                     left_count[ii] < buf.min_leaf_weight ||
                     left_count[ii] > assignment.size - buf.min_leaf_weight) {
                     // if the best goodness is not good enough, a leaf node is still created
-                    _DTLeaf<dim, YStats> *leaf = new _DTLeaf<dim, YStats>(y_stats);
+                    auto *leaf = new DTLeaf<dim, YStats>(y_stats);
 
                     return leaf;
                 } else {
                     // otherwise, create a branch node subject to the picked dimension/goodness
-                    _DTBranch<dim, YStats> *branch = new _DTBranch<dim, YStats>(ii, cutoff[ii]);
+                    auto *branch = new DTBranch<dim, YStats>(ii, cutoff[ii]);
 
                     inplace_split_ptr(*assignment.sorted_samples[ii], assignment);
 
                     // create branched assignment
-                    aleft.sorted_samples.resize(dim);
-                    aleft.ptr = assignment.ptr;
-                    aleft.size = left_count[ii];
-                    aleft.cache_offset = assignment.cache_offset;
-                    aleft.y_stats = y_stats;
-
-                    aright.sorted_samples.resize(dim);
-                    aright.ptr = assignment.ptr + left_count[ii];
-                    aright.size = assignment.size - left_count[ii];
-                    aright.cache_offset = assignment.cache_offset + left_count[ii];
-                    aright.y_stats = y_stats;
+                    aleft.Initialize(dim,
+                                     assignment.ptr,
+                                     left_count[ii],
+                                     assignment.cache_offset,
+                                     y_stats);
+                    aright.Initialize(dim,
+                                      assignment.ptr + left_count[ii],
+                                      assignment.size - left_count[ii],
+                                      assignment.cache_offset + left_count[ii],
+                                      y_stats);
 
                     if (presort) {
 #pragma omp parallel for
@@ -403,15 +396,15 @@ namespace d2 {
                         }
 
 #pragma omp parallel for
-                        for (size_t ii = 0; ii < dim; ++ii) {
-                            auto &ass = assignment.sorted_samples[ii];
-                            auto &left = aleft.sorted_samples[ii];
-                            auto &right = aright.sorted_samples[ii];
+                        for (size_t d = 0; d < dim; ++d) {
+                            auto &ass = assignment.sorted_samples[d];
+                            auto &left = aleft.sorted_samples[d];
+                            auto &right = aright.sorted_samples[d];
                             left = new SortedSampleDeque<YStats>();
                             right = new SortedSampleDeque<YStats>();
                             for (size_t i = 0; i < assignment.size; ++i) {
-                                auto &sorted_sample = ass->front();
-                                char mask = buf.sample_mask_cache[sorted_sample.index];
+                                const auto &sorted_sample = ass->front();
+                                const char mask = buf.sample_mask_cache[sorted_sample.index];
                                 if (mask == 'l') {
                                     left->push_back(sorted_sample);
                                 } else if (mask == 'r') {
@@ -431,9 +424,9 @@ namespace d2 {
 #define BIT_HIGH_POS 30
 
         template<size_t dim, class YStats>
-        _DTNode<dim, YStats> *
-        post_process_node_arr(std::vector<internal::_DTLeaf<dim, YStats> > &leaf_arr,
-                              std::vector<internal::_DTBranch<dim, YStats> > &branch_arr) {
+        DTNode<dim, YStats> *
+        post_process_node_arr(std::vector<internal::DTLeaf<dim, YStats> > &leaf_arr,
+                              std::vector<internal::DTBranch<dim, YStats> > &branch_arr) {
             for (auto iter = branch_arr.begin(); iter < branch_arr.end(); ++iter) {
                 if (iter->nleft & 1 << BIT_HIGH_POS) {
                     iter->left = &branch_arr[iter->nleft & ~(1 << BIT_HIGH_POS)];
@@ -448,10 +441,10 @@ namespace d2 {
                     iter->right = &leaf_arr[iter->nright];
                 }
             }
-            _DTNode<dim, YStats> *r;
+            DTNode<dim, YStats> *r;
             if (!branch_arr.empty()) {
                 r = &branch_arr[0];
-                //	printf("%zd\n", static_cast<_DTBranch<dim, n_class> *>(r)->nleft);
+                //	printf("%zd\n", static_cast<DTBranch<dim, n_class> *>(r)->nleft);
             } else {
                 r = &leaf_arr[0];
             }
@@ -459,14 +452,14 @@ namespace d2 {
         }
 
         template<size_t dim, class YStats, typename criterion>
-        _DTNode<dim, YStats> *build_tree(size_t sample_size,
-                                         BufferForTreeConstructor<dim, YStats> &_buf,
+        DTNode<dim, YStats> *build_tree(size_t sample_size,
+                                         BufferForTreeConstructor<dim, YStats> &buffer,
                                          NodeAssignment<YStats> &assign,
-                                         std::vector<internal::_DTLeaf<dim, YStats> > &leaf_arr,
-                                         std::vector<internal::_DTBranch<dim, YStats> > &branch_arr,
+                                         std::vector<internal::DTLeaf<dim, YStats> > &leaf_arr,
+                                         std::vector<internal::DTBranch<dim, YStats> > &branch_arr,
                                          const bool presort) {
             std::vector<IndexCache> index_arr;
-            if (_buf.warm_start && branch_arr.size() > 0) {
+            if (buffer.warm_start && branch_arr.size() > 0) {
                 for (size_t ii = 0; ii < branch_arr.size(); ++ii) {
                     size_t index = branch_arr[ii].index;
                     int nleft, nright;
@@ -484,12 +477,12 @@ namespace d2 {
                     index_arr.push_back(idc);
                 }
             } else {
-                _buf.warm_start = false;
+                buffer.warm_start = false;
             }
             leaf_arr.clear();
             branch_arr.clear();
 
-            auto &tree_stack = _buf.tree_stack;
+            auto &tree_stack = buffer.tree_stack;
 
             // create index array at root node
             std::vector<size_t> root_index(sample_size);
@@ -504,12 +497,6 @@ namespace d2 {
 
             tree_stack.push(std::make_tuple(root_assignment, -1));
 
-            // allocate cache memory
-            // _buf.sample_cache.resize(sample_size);
-            // to be returned
-            _DTNode<dim, YStats> *root = nullptr;
-            //printf("finish tree induction initialization!\n");
-
 
             // start to travel a tree construction using a stack
             auto current_sample_size_not_in_leaf = sample_size;
@@ -521,19 +508,19 @@ namespace d2 {
                 int cur_parent = std::get<1>(cur_tree);
 
                 NodeAssignment<YStats> assignment_left, assignment_right;
-                _DTNode<dim, YStats> *node;
-                if (_buf.warm_start && cur_assignment.idx_cache_index >= 0)
+                DTNode<dim, YStats> *node;
+                if (buffer.warm_start && cur_assignment.idx_cache_index >= 0)
                     node = build_dtnode<dim, YStats, criterion>(cur_assignment,
                                                                 assignment_left,
                                                                 assignment_right,
-                                                                _buf,
+                                                                buffer,
                                                                 presort,
                                                                 index_arr[cur_assignment.idx_cache_index].index);
                 else
                     node = build_dtnode<dim, YStats, criterion>(cur_assignment,
                                                                 assignment_left,
                                                                 assignment_right,
-                                                                _buf,
+                                                                buffer,
                                                                 presort);
                 node->parent = cur_parent; // set parent index
                 tree_stack.pop();
@@ -542,7 +529,7 @@ namespace d2 {
                     std::cout << "branching" << std::endl;
                     assignment_left.depth = cur_assignment.depth + 1;
                     assignment_right.depth = cur_assignment.depth + 1;
-                    if (_buf.warm_start && cur_assignment.idx_cache_index >= 0) {
+                    if (buffer.warm_start && cur_assignment.idx_cache_index >= 0) {
                         assignment_left.idx_cache_index = index_arr[cur_assignment.idx_cache_index].nleft;
                         assignment_right.idx_cache_index = index_arr[cur_assignment.idx_cache_index].nright;
                     } else {
@@ -553,12 +540,12 @@ namespace d2 {
                     is_branch = true;
                     tree_stack.push(std::make_tuple(assignment_left, branch_arr.size()));
                     tree_stack.push(std::make_tuple(assignment_right, branch_arr.size()));
-                    branch_arr.push_back(std::move(*static_cast<_DTBranch<dim, YStats> * > (node)));
+                    branch_arr.push_back(std::move(*static_cast<DTBranch<dim, YStats> * > (node)));
                 } else {
                     current_sample_size_not_in_leaf -= cur_assignment.size;
                     std::cout << "reaching a leaf (" << current_sample_size_not_in_leaf << ")" << std::endl;
                     is_branch = false;
-                    leaf_arr.push_back(std::move(*static_cast<_DTLeaf<dim, YStats> * > (node)));
+                    leaf_arr.push_back(std::move(*static_cast<DTLeaf<dim, YStats> * > (node)));
                 }
                 if (cur_parent >= 0) {
                     // set child node index
@@ -578,7 +565,7 @@ namespace d2 {
           root = post_process_node_arr(leaf_arr, branch_arr);
           real_t error_before_pruning = root->get_R();
           real_t weight = root->weight;
-          size_t n_leafs = root->get_leaf_count();
+          size_t n_leafs = root->getLeafCount();
           real_t min_alpha = 0;
           std::cerr << getLogHeader() << "initial terminal nodes: "<<  n_leafs << std::endl;
           while (n_leafs > 512) {
@@ -605,8 +592,8 @@ namespace d2 {
             }
             //	printf("%lf %d\n", min_alpha, min_ind);
             //record pruning branch candidate
-            _DTLeaf<dim, YStats>* leaf = new _DTLeaf<dim, YStats>(branch_arr[min_ind]);
-            _DTBranch<dim, YStats> &parent = branch_arr[branch_arr[min_ind].parent];
+            DTLeaf<dim, YStats>* leaf = new DTLeaf<dim, YStats>(branch_arr[min_ind]);
+            DTBranch<dim, YStats> &parent = branch_arr[branch_arr[min_ind].parent];
             if (parent.nleft == (min_ind | (1<<BIT_HIGH_POS))) {
               parent.nleft = leaf_arr.size();
               leaf_arr.push_back(std::move(*leaf));
@@ -649,7 +636,7 @@ namespace d2 {
             const real_t *x = X;
             assert(root);
             for (size_t i = 0; i < n; ++i, x += dim) {
-                auto leaf = root->get_leafnode(x);
+                auto leaf = root->getLeafNode(x);
                 if (node_mapper) {
                     (*node_mapper)[leaf->hashCode()]++;
                 }
@@ -684,9 +671,9 @@ namespace d2 {
             if (sparse) {
                 size_t nz = 0;
                 for (size_t i = 0; i < n; ++i) nz += sample_weight[i] > 0;
-                real_t *XX_ = new real_t[nz * dim];
-                label_t *yy_ = new label_t[nz];
-                real_t *ss_ = new real_t[nz];
+                auto *XX_ = new real_t[nz * dim];
+                auto *yy_ = new label_t[nz];
+                auto *ss_ = new real_t[nz];
                 size_t count = 0;
                 for (size_t i = 0; i < n; ++i)
                     if (sample_weight[i] > 0) {
@@ -735,9 +722,9 @@ namespace d2 {
 
         inline void set_min_leaf_weight(real_t weight) { min_leaf_weight = weight; }
 
-        typedef internal::_DTNode<dim, YStats> Node;
-        typedef internal::_DTLeaf<dim, YStats> LeafNode;
-        typedef internal::_DTBranch<dim, YStats> BranchNode;
+        typedef internal::DTNode<dim, YStats> Node;
+        typedef internal::DTLeaf<dim, YStats> LeafNode;
+        typedef internal::DTBranch<dim, YStats> BranchNode;
 
 #ifdef RABIT_RABIT_H_
         typedef rabit::utils::MemoryBufferStream MemoryBufferStream;
@@ -824,37 +811,22 @@ namespace d2 {
 
         void prepare_presort(const real_t *XX, const label_t *yy, const real_t *ss,
                              const size_t sample_size,
-                             internal::BufferForTreeConstructor<dim, YStats> &buf,
-                             internal::NodeAssignment<YStats> &assign) {
-
-            /*
-            buf.X.resize(dim);
-            for (size_t k=0; k<dim; ++k) buf.X[k].resize(sample_size);
-            */
-            buf.y.resize(sample_size);
-            buf.sample_weight.resize(sample_size, 1.);
+                             internal::BufferForTreeConstructor<dim, YStats> &buffer,
+                             internal::NodeAssignment<YStats> &assignment) {
+            buffer.y.resize(sample_size);
+            buffer.sample_weight.resize(sample_size, 1.);
             for (size_t i = 0; i < sample_size; ++i) {
-                /*
-                for (size_t k=0; k<dim; ++k, ++j) {
-                  buf.X[k][i]=XX[j];
-                }
-                */
-                buf.y[i] = yy[i];
+                buffer.y[i] = yy[i];
             }
             if (ss)
-                for (size_t i = 0; i < sample_size; ++i) buf.sample_weight[i] = ss[i];
+                for (size_t i = 0; i < sample_size; ++i) buffer.sample_weight[i] = ss[i];
 
-
-            assign.sorted_samples.resize(dim);
-            buf.inv_ind_sorted.resize(dim);
-            buf.sample_mask_cache.resize(sample_size);
+            assignment.sorted_samples.resize(dim);
+            buffer.sample_mask_cache.resize(sample_size);
 #pragma omp parallel for
             for (size_t k = 0; k < dim; ++k) {
-                auto &sorted_samples = assign.sorted_samples[k];
-                //auto &inv_ind_sorted = buf.inv_ind_sorted[k];
+                auto &sorted_samples = assignment.sorted_samples[k];
                 sorted_samples = new internal::SortedSampleDeque<YStats>(sample_size);
-                //inv_ind_sorted.resize(sample_size);
-                //const real_t * XX = &buf.X[k][0];
                 const real_t *XXX = XX + k;
                 for (size_t i = 0; i < sample_size; ++i, XXX += dim) {
                     auto &sample = (*sorted_samples)[i];

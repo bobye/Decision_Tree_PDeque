@@ -121,7 +121,7 @@ int main(int argc, char *argv[]) {
     double start = getRealTime();
     classifier->fit(X, y, w, N);
     printf("training time: %lf seconds\n", getRealTime() - start);
-    printf("nleafs: %zu \n", classifier->root->get_leaf_count());
+    printf("nleafs: %zu \n", classifier->root->getLeafCount());
 
     if (argc == 1) {
         // prepare naive testing data

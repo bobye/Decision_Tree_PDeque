@@ -148,7 +148,7 @@ int main(int argc, char* argv[]) {
     double start=getRealTime();
     classifier.fit(X_reduced.data(), y_reduced.data(), NULL, y_reduced.size());
     printf("training time: %lf seconds\n", getRealTime() - start);
-    printf("nleafs: %zu \n", classifier.root->get_leaf_count());
+    printf("nleafs: %zu \n", classifier.root->getLeafCount());
     X_reduced.clear();
     y_reduced.clear();
     

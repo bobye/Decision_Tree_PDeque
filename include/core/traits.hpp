@@ -28,6 +28,7 @@ namespace d2 {
             static void op(YStats &y_stats) {}
         };
 
+        // inherit statistics from parent
         template<class YStats, typename criterion>
         struct prepare {
             static YStats left_op(const YStats &y_stats) { return YStats(); }
@@ -43,10 +44,10 @@ namespace d2 {
         struct SortedSample;
 
         template<size_t dim, class YStats>
-        class _DTLeaf;
+        class DTLeaf;
 
         template<size_t dim, class YStats>
-        class _DTBranch;
+        class DTBranch;
 
     }
 }
