@@ -24,16 +24,16 @@ namespace d2 {
 
             using LabelType = Stats<_D2_CLTYPE>::LabelType;
 
-            inline LabelType get_label() const override {
+            inline LabelType getLabel() const override {
                 return std::max_element(histogram.begin(), histogram.end() - 1) - histogram.begin();
             }
 
-            inline void update_left(LabelType y) override {
+            inline void updateLeft(LabelType y) override {
                 histogram[y]++;
                 histogram.back()++;
             }
 
-            inline void update_right(LabelType y) override {
+            inline void updateRight(LabelType y) override {
                 histogram[y]--;
                 histogram.back()--;
             }
@@ -103,15 +103,15 @@ namespace d2 {
     namespace internal {
 
         template<size_t n_class>
-        struct sorted_sample<def::ClassificationStats<n_class> > {
+        struct SortedSample<def::ClassificationStats<n_class> > {
             real_t x;
             _D2_CLTYPE y;
             //      real_t weight;
             size_t index;
 
-            //sorted_sample *next;
-            inline static bool cmp(const sorted_sample<def::ClassificationStats<n_class> > &a,
-                                   const sorted_sample<def::ClassificationStats<n_class> > &b) {
+            //SortedSample *next;
+            inline static bool cmp(const SortedSample<def::ClassificationStats<n_class> > &a,
+                                   const SortedSample<def::ClassificationStats<n_class> > &b) {
                 return a.x < b.x;
             }
         };

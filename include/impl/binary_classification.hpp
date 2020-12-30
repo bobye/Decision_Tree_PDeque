@@ -28,7 +28,7 @@ namespace d2 {
 
             using LabelType = Stats<_D2_CLTYPE>::LabelType;
 
-            inline LabelType get_label() const override {
+            inline LabelType getLabel() const override {
                 if (alpha * histogram[1] - (1 - alpha) * histogram[0] <= 0) {
                     return 0;
                 } else {
@@ -36,11 +36,11 @@ namespace d2 {
                 }
             }
 
-            inline void update_left(LabelType y) override {
+            inline void updateLeft(LabelType y) override {
                 histogram[y]++;
             }
 
-            inline void update_right(LabelType y) override {
+            inline void updateRight(LabelType y) override {
                 histogram[y]--;
             }
 
@@ -69,13 +69,13 @@ namespace d2 {
     namespace internal {
 
         template<>
-        struct sorted_sample<def::BinaryClassificationStats> {
+        struct SortedSample<def::BinaryClassificationStats> {
             real_t x;
             _D2_CLTYPE y;
             size_t index;
 
-            inline static bool cmp(const sorted_sample<def::BinaryClassificationStats> &a,
-                                   const sorted_sample<def::BinaryClassificationStats> &b) {
+            inline static bool cmp(const SortedSample<def::BinaryClassificationStats> &a,
+                                   const SortedSample<def::BinaryClassificationStats> &b) {
                 return a.x < b.x;
             }
         };

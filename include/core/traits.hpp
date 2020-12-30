@@ -14,11 +14,11 @@ namespace d2 {
         struct Stats {
             typedef LT LabelType;
 
-            virtual inline void update_left(LabelType y) = 0;
+            virtual inline void updateLeft(LabelType y) = 0;
 
-            virtual inline void update_right(LabelType y) = 0;
+            virtual inline void updateRight(LabelType y) = 0;
 
-            virtual inline LabelType get_label() const = 0;
+            virtual inline LabelType getLabel() const = 0;
 
             virtual inline bool stop() const = 0;
         };
@@ -40,7 +40,7 @@ namespace d2 {
         /*! \brief data structure for additional linked list on presort samples
          */
         template<class YStats>
-        struct sorted_sample;
+        struct SortedSample;
 
         template<size_t dim, class YStats>
         class _DTLeaf;

@@ -20,17 +20,17 @@ namespace d2 {
                     count(that.count), sum(that.sum), sum_sq(that.sum_sq) {
             }
 
-            inline LabelType get_label() const override {
+            inline LabelType getLabel() const override {
                 return (LabelType) sum / (LabelType) count;
             }
 
-            inline void update_left(LabelType y) override {
+            inline void updateLeft(LabelType y) override {
                 count++;
                 sum += y;
                 sum_sq += y * y;
             }
 
-            inline void update_right(LabelType y) override {
+            inline void updateRight(LabelType y) override {
                 count--;
                 sum -= y;
                 sum_sq -= y * y;
@@ -61,15 +61,15 @@ namespace d2 {
 
     namespace internal {
         template<>
-        struct sorted_sample<def::RegressionStats> {
+        struct SortedSample<def::RegressionStats> {
             real_t x;
             real_t y;
             //      real_t weight;
             size_t index;
 
-            //sorted_sample *next;
-            inline static bool cmp(const sorted_sample<def::RegressionStats> &a,
-                                   const sorted_sample<def::RegressionStats> &b) {
+            //SortedSample *next;
+            inline static bool cmp(const SortedSample<def::RegressionStats> &a,
+                                   const SortedSample<def::RegressionStats> &b) {
                 return a.x < b.x;
             }
         };

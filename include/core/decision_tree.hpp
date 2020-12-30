@@ -83,7 +83,7 @@ namespace d2 {
             _DTLeaf() {}
 
             _DTLeaf(const YStats &ys) : _DTNode<dim, YStats>(ys) {
-                label = ys.get_label();
+                label = ys.getLabel();
             }
 
             /*! \brief construct a new leaf node from a branch node */
@@ -93,7 +93,7 @@ namespace d2 {
                 //this->weight = that.weight;
                 //this->r = that.r;
                 this->parent = that.parent;
-                this->label = that.y_stats.get_label();
+                this->label = that.y_stats.getLabel();
             }
 
             Leaf *get_leafnode(const real_t *X) {
@@ -214,16 +214,16 @@ namespace d2 {
          * the indexes of sample data
          */
         template<class YStats>
-        struct ss_deque_t : public std::deque<sorted_sample<YStats> > {
-            ss_deque_t() : std::deque<sorted_sample<YStats> >() {}
+        struct SortedSampleDeque : public std::deque<SortedSample<YStats> > {
+            SortedSampleDeque() : std::deque<SortedSample<YStats> >() {}
 
-            ss_deque_t(const size_t n) : std::deque<sorted_sample<YStats> >(n) {}
+            SortedSampleDeque(const size_t n) : std::deque<SortedSample<YStats> >(n) {}
         };
 
         template<class YStats>
-        struct node_assignment {
+        struct NodeAssignment {
             size_t *ptr; ///< index array
-            std::vector<ss_deque_t<YStats> *> sorted_samples;
+            std::vector<SortedSampleDeque<YStats> *> sorted_samples;
             size_t size; ///< size of index array
             size_t cache_offset; ///< offset to the cache array head, aka (ptr - cache_offset) should be constant
             int idx_cache_index;
@@ -231,7 +231,7 @@ namespace d2 {
             YStats y_stats;
         };
 
-        struct index_cache {
+        struct IndexCache {
             size_t index;
             int nleft;
             int nright;
@@ -240,7 +240,7 @@ namespace d2 {
         /*! \brief the whole data structure used in building the decision trees
          */
         template<size_t dim, class YStats>
-        struct buf_tree_constructor {
+        struct BufferForTreeConstructor {
             //std::vector<std::vector<real_t> > X; ///< store data in coordinate-order
             std::vector<typename YStats::LabelType> y;
             std::vector<real_t> sample_weight;
@@ -248,17 +248,17 @@ namespace d2 {
             real_t min_leaf_weight;
             bool warm_start = false;
             //std::vector<sample> sample_cache;
-            std::stack<std::tuple<node_assignment<YStats>, int> > tree_stack;
+            std::stack<std::tuple<NodeAssignment<YStats>, int> > tree_stack;
 
             // decision tree with presort
-            //std::vector<std::vector<sorted_sample> > sorted_samples;
+            //std::vector<std::vector<SortedSample> > sorted_samples;
             std::vector<std::vector<size_t> > inv_ind_sorted;
             std::vector<char> sample_mask_cache;
         };
 
 
         template<size_t dim, class YStats, typename criterion>
-        real_t best_split_ptr(std::deque<sorted_sample<YStats> > &sample_deque,
+        real_t best_split_ptr(SortedSampleDeque<YStats> &sample_deque,
                               size_t n,
                               real_t &cutoff,
                               size_t &left_count,
@@ -279,8 +279,8 @@ namespace d2 {
                 const real_t current_x = sample->x;
                 typename YStats::LabelType yy = label = sample->y;
                 while (i < n && (sample->x == current_x || yy == label)) {
-                    y_stats_left.update_left(yy);
-                    y_stats_right.update_right(yy);
+                    y_stats_left.updateLeft(yy);
+                    y_stats_right.updateRight(yy);
                     i++;
                     sample++;
                     if (sample != sample_deque.end()) {
@@ -303,8 +303,8 @@ namespace d2 {
 
 
         template<class YStats>
-        void inplace_split_ptr(std::deque<sorted_sample<YStats> > &sample_deque,
-                               node_assignment<YStats> &assignment) {
+        void inplace_split_ptr(SortedSampleDeque<YStats> &sample_deque,
+                               NodeAssignment<YStats> &assignment) {
 #pragma omp parallel for
             for (size_t i = 0; i < assignment.size; ++i) {
                 assignment.ptr[i] = sample_deque[i].index;
@@ -312,10 +312,10 @@ namespace d2 {
         }
 
         template<size_t dim, class YStats, typename criterion>
-        _DTNode<dim, YStats> *build_dtnode(node_assignment<YStats> &assignment,
-                                           node_assignment<YStats> &aleft,
-                                           node_assignment<YStats> &aright,
-                                           buf_tree_constructor<dim, YStats> &buf,
+        _DTNode<dim, YStats> *build_dtnode(NodeAssignment<YStats> &assignment,
+                                           NodeAssignment<YStats> &aleft,
+                                           NodeAssignment<YStats> &aright,
+                                           BufferForTreeConstructor<dim, YStats> &buf,
                                            const bool presort,
                                            const int dim_index = -1) {
             // default: return leaf node
@@ -330,7 +330,7 @@ namespace d2 {
             size_t *index = assignment.ptr;
 #pragma omp for
             for (size_t ii = 0; ii < assignment.size; ++ii) {
-                y_stats.update_left(buf.y[index[ii]]);
+                y_stats.updateLeft(buf.y[index[ii]]);
             }
             def::finalize<YStats, criterion>::op(y_stats);
 
@@ -407,8 +407,8 @@ namespace d2 {
                             auto &ass = assignment.sorted_samples[ii];
                             auto &left = aleft.sorted_samples[ii];
                             auto &right = aright.sorted_samples[ii];
-                            left = new ss_deque_t<YStats>();
-                            right = new ss_deque_t<YStats>();
+                            left = new SortedSampleDeque<YStats>();
+                            right = new SortedSampleDeque<YStats>();
                             for (size_t i = 0; i < assignment.size; ++i) {
                                 auto &sorted_sample = ass->front();
                                 char mask = buf.sample_mask_cache[sorted_sample.index];
@@ -460,12 +460,12 @@ namespace d2 {
 
         template<size_t dim, class YStats, typename criterion>
         _DTNode<dim, YStats> *build_tree(size_t sample_size,
-                                         buf_tree_constructor<dim, YStats> &_buf,
-                                         node_assignment<YStats> &assign,
+                                         BufferForTreeConstructor<dim, YStats> &_buf,
+                                         NodeAssignment<YStats> &assign,
                                          std::vector<internal::_DTLeaf<dim, YStats> > &leaf_arr,
                                          std::vector<internal::_DTBranch<dim, YStats> > &branch_arr,
                                          const bool presort) {
-            std::vector<index_cache> index_arr;
+            std::vector<IndexCache> index_arr;
             if (_buf.warm_start && branch_arr.size() > 0) {
                 for (size_t ii = 0; ii < branch_arr.size(); ++ii) {
                     size_t index = branch_arr[ii].index;
@@ -480,7 +480,7 @@ namespace d2 {
                     else
                         nright = -1;
 
-                    index_cache idc = {index, nleft, nright};
+                    IndexCache idc = {index, nleft, nright};
                     index_arr.push_back(idc);
                 }
             } else {
@@ -494,8 +494,8 @@ namespace d2 {
             // create index array at root node
             std::vector<size_t> root_index(sample_size);
             for (size_t i = 0; i < sample_size; ++i) root_index[i] = i;
-            // create the node_assignment at root node and push into stack
-            node_assignment<YStats> &root_assignment = assign;
+            // create the NodeAssignment at root node and push into stack
+            NodeAssignment<YStats> &root_assignment = assign;
             root_assignment.ptr = &root_index[0];
             root_assignment.size = sample_size;
             root_assignment.cache_offset = 0;
@@ -520,7 +520,7 @@ namespace d2 {
                 auto cur_assignment = std::get<0>(cur_tree);
                 int cur_parent = std::get<1>(cur_tree);
 
-                node_assignment<YStats> assignment_left, assignment_right;
+                NodeAssignment<YStats> assignment_left, assignment_right;
                 _DTNode<dim, YStats> *node;
                 if (_buf.warm_start && cur_assignment.idx_cache_index >= 0)
                     node = build_dtnode<dim, YStats, criterion>(cur_assignment,
@@ -813,8 +813,8 @@ namespace d2 {
 
         Node *root = nullptr;
     private:
-        internal::buf_tree_constructor<dim, YStats> buf;
-        internal::node_assignment<YStats> assign;
+        internal::BufferForTreeConstructor<dim, YStats> buf;
+        internal::NodeAssignment<YStats> assign;
         std::vector<LeafNode> leaf_arr;
         std::vector<BranchNode> branch_arr;
         size_t max_depth = 10;
@@ -824,8 +824,8 @@ namespace d2 {
 
         void prepare_presort(const real_t *XX, const label_t *yy, const real_t *ss,
                              const size_t sample_size,
-                             internal::buf_tree_constructor<dim, YStats> &buf,
-                             internal::node_assignment<YStats> &assign) {
+                             internal::BufferForTreeConstructor<dim, YStats> &buf,
+                             internal::NodeAssignment<YStats> &assign) {
 
             /*
             buf.X.resize(dim);
@@ -852,7 +852,7 @@ namespace d2 {
             for (size_t k = 0; k < dim; ++k) {
                 auto &sorted_samples = assign.sorted_samples[k];
                 //auto &inv_ind_sorted = buf.inv_ind_sorted[k];
-                sorted_samples = new internal::ss_deque_t<YStats>(sample_size);
+                sorted_samples = new internal::SortedSampleDeque<YStats>(sample_size);
                 //inv_ind_sorted.resize(sample_size);
                 //const real_t * XX = &buf.X[k][0];
                 const real_t *XXX = XX + k;
@@ -867,7 +867,7 @@ namespace d2 {
                     */
                 }
                 // presort
-                std::sort(sorted_samples->begin(), sorted_samples->end(), internal::sorted_sample<YStats>::cmp);
+                std::sort(sorted_samples->begin(), sorted_samples->end(), internal::SortedSample<YStats>::cmp);
 
             }
         }

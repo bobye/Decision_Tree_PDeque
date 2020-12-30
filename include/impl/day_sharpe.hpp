@@ -61,17 +61,17 @@ namespace d2 {
 
             using Stats<reward_date_pair>::LabelType;
 
-            inline LabelType get_label() const override {
+            inline LabelType getLabel() const override {
                 return {std::min(_sharpe_helper(this->forward_return).sharpe, (real_t) 0.),
                         std::numeric_limits<std::size_t>::max()};
             }
 
-            inline void update_left(LabelType y) override {
+            inline void updateLeft(LabelType y) override {
                 forward_return[y.date] += y.reward;
                 count++;
             }
 
-            inline void update_right(LabelType y) override {
+            inline void updateRight(LabelType y) override {
                 forward_return[y.date] -= y.reward;
                 count--;
             }
@@ -118,18 +118,18 @@ namespace d2 {
 
     namespace internal {
         template<class YStats>
-        struct sorted_sample;
+        struct SortedSample;
 
         template<size_t days>
-        struct sorted_sample<def::DaySharpeStats<days> > {
+        struct SortedSample<def::DaySharpeStats<days> > {
             real_t x;
             def::reward_date_pair y;
             //      real_t weight;
             size_t index;
 
-            //sorted_sample *next;
-            inline static bool cmp(const sorted_sample<def::DaySharpeStats<days> > &a,
-                                   const sorted_sample<def::DaySharpeStats<days> > &b) {
+            //SortedSample *next;
+            inline static bool cmp(const SortedSample<def::DaySharpeStats<days> > &a,
+                                   const SortedSample<def::DaySharpeStats<days> > &b) {
                 return a.x < b.x;
             }
         };
