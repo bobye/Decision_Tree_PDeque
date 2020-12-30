@@ -17,19 +17,19 @@ This is the proof-of-concept demo code for reproducing experiments in the arXiv 
 ```
 $ make
 $ OMP_NUM_THREADS=28 ./build/test_dt higgs-train-1m.csv higgs-test.csv
-tree induction time: 1.217055 seconds
-training time: 2.237200 seconds
-nleafs: 2216 
-test accuracy: 0.710
+tree induction time: 1.475672 seconds
+training time: 2.048821 seconds
+nleafs: 1845 
+test metric: FP 0.276, FN 0.317, Sensitivity 0.720, Specificity 0.687, Accuracy 0.705
 ```
 
 ### Other tests on synthetic data
 ```
-$ OMP_NUM_THREADS=8 ./build/test_dt
-tree induction time: 2.715179 seconds
-training time: 4.514815 seconds
-nleafs: 33
-test accuracy: 0.973
+$ OMP_NUM_THREADS=12 ./build/test_dt 
+tree induction time: 1.425927 seconds
+training time: 2.048105 seconds
+nleafs: 24 
+test metric: FP 0.801, FN 0.000, Sensitivity 1.000, Specificity 0.985, Accuracy 0.985
 ```
 ----
-All rights reserved. Jianbo Ye
+All rights reserved (2017-2023). Jianbo Ye
